@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Mi suscripción{% endblock %}
+{% block titulo_pagina %}Mi suscripción{% endblock %}
+
+{% block contenido %}
+<div class="grid grid-2">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Plan actual</h3></div>
+    {% if suscripcion_activa %}
+      <p style="font-size:1.3rem; font-family:var(--fuente-titulo); margin-bottom:4px;">
+        {{ suscripcion_activa.plan.nombre }}
+        {% if suscripcion_activa.plan.codigo == "premium" %}<span class="insignia insignia-premium">Premium</span>{% else %}<span class="insignia insignia-basico">Básico</span>{% endif %}
+      </p>
+      <p class="texto-tenue">Activa desde el {{ suscripcion_activa.fecha_inicio|date:"d/m/Y" }}</p>
+      <a href="{% url 'subscriptions:planes' %}" class="btn btn-secundario" style="margin-top:14px;">Cambiar de plan</a>
+    {% else %}
+      <p class="texto-tenue">No tienes una suscripción activa.</p>
+      <a href="{% url 'subscriptions:planes' %}" class="btn btn-primario">Ver planes</a>
+    {% endif %}
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Historial</h3></div>
+    {% if historial %}
+      <div class="tabla-envoltorio">
+        <table class="tabla">
+          <thead><tr><th>Plan</th><th>Estado</th><th>Método</th><th>Fecha</th></tr></thead>
+          <tbody>
+            {% for s in historial %}
+            <tr>
+              <td>{{ s.plan.nombre }}</td>
+              <td>
+                {% if s.estado == "activa" %}<span class="insignia insignia-ingreso">Activa</span>
+                {% elif s.estado == "pendiente" %}<span class="insignia insignia-info">Pendiente</span>
+                {% else %}<span class="insignia insignia-basico">{{ s.get_estado_display }}</span>{% endif %}
+              </td>
+              <td>{{ s.get_metodo_pago_display }}</td>
+              <td>{{ s.creada_en|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="texto-tenue">Aún no hay historial de suscripciones.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

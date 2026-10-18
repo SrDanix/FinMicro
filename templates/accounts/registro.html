@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta{% endblock %}
+
+{% block contenido_publico %}
+<section style="max-width: 560px; margin: 32px auto 64px; padding: 0 20px;">
+  <div class="tarjeta">
+    <h1 style="margin-bottom:4px;">Crea tu cuenta en FinMicro</h1>
+    <p class="texto-tenue" style="margin-bottom:24px;">Empiezas directo en el Plan Básico, sin costo. Puedes subir a Premium cuando quieras.</p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario btn-bloque">Crear cuenta gratis</button>
+    </form>
+
+    <p class="texto-centro" style="margin-top:18px; font-size:0.88rem;">
+      ¿Ya tienes cuenta? <a href="{% url 'accounts:login' %}">Inicia sesión</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

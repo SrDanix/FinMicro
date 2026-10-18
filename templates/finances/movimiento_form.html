@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{% if modo == "editar" %}Editar movimiento{% else %}Nuevo movimiento{% endif %}{% endblock %}
+{% block titulo_pagina %}{% if modo == "editar" %}Editar movimiento{% else %}Nuevo movimiento{% endif %}{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:520px;">
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "partials/_campos_formulario.html" %}
+    <div class="flex-entre">
+      <a href="{% url 'finances:crear_categoria' %}" class="btn btn-fantasma btn-chico">+ Crear categoría propia</a>
+      <div>
+        <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma">Cancelar</a>
+        <button type="submit" class="btn btn-primario">Guardar</button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+  // Muestra solo las categorías que corresponden al tipo elegido.
+  // El texto de cada opción termina en "(Ingreso)" o "(Gasto)".
+  (function () {
+    const tipo = document.getElementById("id_tipo");
+    const categoria = document.querySelector("select[data-filtrable]");
+    if (!tipo || !categoria) return;
+    function filtrar() {
+      const etiqueta = tipo.options[tipo.selectedIndex] ? tipo.options[tipo.selectedIndex].text : "";
+      for (const opcion of categoria.options) {
+        if (!opcion.value) continue;
+        const visible = !etiqueta || etiqueta.startsWith("-") || opcion.text.endsWith("(" + etiqueta + ")");
+        opcion.hidden = !visible;
+        if (!visible && opcion.selected) categoria.value = "";
+      }
+    }
+    tipo.addEventListener("change", filtrar);
+    filtrar();
+  })();
+</script>
+{% endblock %}

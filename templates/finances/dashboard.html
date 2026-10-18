@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Panel{% endblock %}
+{% block titulo_pagina %}Panel{% endblock %}
+
+{% block acciones_barra %}
+<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>
+{% endblock %}
+
+{% block contenido %}
+{% if cerca_del_limite %}
+<div class="aviso aviso-alerta">
+  Llevas {{ movimientos_del_mes }} de {{ plan.limite_movimientos_mensuales }} movimientos este mes.
+  <a href="{% url 'subscriptions:planes' %}">Sube a Premium</a> para registrar sin límite.
+</div>
+{% endif %}
+
+<div class="grid grid-3">
+  <div class="tarjeta tarjeta-recibo mt-0">
+    <div class="etiqueta">Balance del mes</div>
+    <div class="monto-grande{% if resumen.balance < 0 %} negativo{% endif %}">${{ resumen.balance|floatformat:"0g" }}</div>
+  </div>
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Ingresos del mes</div>
+    <div class="valor ingreso cifra">${{ resumen.ingresos|floatformat:"0g" }}</div>
+  </div>
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Gastos del mes</div>
+    <div class="valor gasto cifra">${{ resumen.gastos|floatformat:"0g" }}</div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:20px;">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Últimos 6 meses</h3></div>
+    <canvas id="graficoMeses" height="220"></canvas>
+    <p class="texto-tenue" id="graficoVacio" style="display:none;">Aún no hay movimientos para graficar.</p>
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo flex-entre">
+      <h3>Últimos movimientos</h3>
+      <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma btn-chico">Ver todos</a>
+    </div>
+    {% if ultimos_movimientos %}
+      <div class="tabla-envoltorio">
+        <table class="tabla">
+          <tbody>
+            {% for m in ultimos_movimientos %}
+            <tr>
+              <td>{{ m.fecha|date:"d/m" }}</td>
+              <td>{{ m.categoria.nombre }}{% if m.descripcion %}<div class="texto-tenue" style="font-size:0.8rem;">{{ m.descripcion }}</div>{% endif %}</td>
+              <td class="col-monto {% if m.tipo == 'ingreso' %}texto-ingreso{% else %}texto-gasto{% endif %}">
+                {% if m.tipo == 'ingreso' %}+{% else %}-{% endif %}${{ m.monto|floatformat:"0g" }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="estado-vacio">
+        <h3>Sin movimientos todavía</h3>
+        <p class="texto-tenue">Registra tu primera venta o gasto para ver tu resumen.</p>
+        <a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">Registrar movimiento</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  (function () {
+    const datos = {{ grafico_datos|safe }};
+    if (!datos.etiquetas.length || typeof Chart === "undefined") {
+      document.getElementById("graficoMeses").style.display = "none";
+      document.getElementById("graficoVacio").style.display = "block";
+      return;
+    }
+    new Chart(document.getElementById("graficoMeses"), {
+      type: "bar",
+      data: {
+        labels: datos.etiquetas,
+        datasets: [
+          { label: "Ingresos", data: datos.ingresos, backgroundColor: "#1b6b4e" },
+          { label: "Gastos", data: datos.gastos, backgroundColor: "#b54848" },
+        ],
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } },
+    });
+  })();
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesión{% endblock %}
+
+{% block contenido_publico %}
+<section style="max-width: 420px; margin: 56px auto 64px; padding: 0 20px;">
+  <div class="tarjeta">
+    <h1 style="margin-bottom:4px;">Iniciar sesión</h1>
+    <p class="texto-tenue" style="margin-bottom:24px;">Entra a tu panel de FinMicro.</p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario btn-bloque">Entrar</button>
+    </form>
+
+    <p class="texto-centro" style="margin-top:18px; font-size:0.88rem;">
+      ¿Aún no tienes cuenta? <a href="{% url 'accounts:registro' %}">Crea una gratis</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

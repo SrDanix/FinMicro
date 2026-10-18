@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Pago simulado{% endblock %}
+{% block titulo_pagina %}Pago simulado{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta texto-centro" style="max-width:460px;">
+  <span class="insignia insignia-info" style="margin-bottom:14px;">Modo simulado</span>
+  <h2>Confirmar pago de {{ suscripcion.plan.nombre }}</h2>
+  <p class="texto-tenue">
+    Aún no hay credenciales reales de {{ suscripcion.get_metodo_pago_display }} configuradas
+    (ver <code>PAGOS_MODO_SIMULADO</code> en <code>.env</code>), así que esta pantalla
+    reemplaza a la pasarela real para poder probar el flujo completo.
+  </p>
+  <div class="tarjeta" style="background:var(--fondo); margin:18px 0;">
+    <div class="flex-entre"><span class="texto-tenue">Plan</span><strong>{{ suscripcion.plan.nombre }}</strong></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Monto</span><strong class="cifra">${{ suscripcion.plan.precio_mensual_clp }}</strong></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Referencia</span><span class="cifra" style="font-size:0.82rem;">{{ suscripcion.referencia_pago }}</span></div>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primario btn-bloque">Simular pago aprobado</button>
+  </form>
+  <a href="{% url 'subscriptions:planes' %}" class="btn btn-fantasma btn-bloque" style="margin-top:8px;">Cancelar</a>
+</div>
+{% endblock %}

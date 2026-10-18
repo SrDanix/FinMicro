@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Impuestos{% endblock %}
+{% block titulo_pagina %}Calculadora de impuestos{% endblock %}
+
+{% block contenido %}
+<p class="texto-tenue" style="max-width:70ch;">
+  Herramienta de apoyo con las tasas vigentes del SII. No reemplaza la asesoría de un contador:
+  valida siempre el resultado en sii.cl antes de declarar.
+</p>
+
+<div class="grid grid-2" style="margin-top:16px;">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>IVA mensual (19%)</h3></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="formulario" value="iva">
+      {% include "partials/_campos_formulario.html" with form=iva_form %}
+      <button type="submit" class="btn btn-primario">Calcular IVA</button>
+    </form>
+
+    {% if resultado_iva %}
+    <div class="separador-v"></div>
+    <table class="tabla">
+      <tr><td class="texto-tenue">IVA débito (ventas)</td><td class="col-monto">${{ resultado_iva.iva_debito|floatformat:"0g" }}</td></tr>
+      <tr><td class="texto-tenue">IVA crédito (compras)</td><td class="col-monto">${{ resultado_iva.iva_credito|floatformat:"0g" }}</td></tr>
+      <tr>
+        <td><strong>{% if resultado_iva.remanente %}Remanente a favor{% else %}IVA a pagar{% endif %}</strong></td>
+        <td class="col-monto {% if resultado_iva.remanente %}texto-ingreso{% else %}texto-gasto{% endif %}"><strong>${{ resultado_iva.resultado|floatformat:"0g" }}</strong></td>
+      </tr>
+    </table>
+    {% endif %}
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Boleta de honorarios</h3></div>
+    {% if not mostrar_honorarios %}
+      <p class="texto-ayuda" style="margin-top:0;">Puedes marcar "Emite boletas de honorarios" en <a href="{% url 'accounts:perfil' %}">tu perfil</a>.</p>
+    {% endif %}
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="formulario" value="honorarios">
+      {% include "partials/_campos_formulario.html" with form=honorarios_form %}
+      <button type="submit" class="btn btn-primario">Calcular retención</button>
+    </form>
+
+    {% if resultado_honorarios %}
+    <div class="separador-v"></div>
+    <table class="tabla">
+      <tr><td class="texto-tenue">Tasa de retención {{ resultado_honorarios.anio }}</td><td class="col-monto">{{ resultado_honorarios.tasa_porcentaje|floatformat:"-2" }}%</td></tr>
+      <tr><td class="texto-tenue">Monto bruto</td><td class="col-monto">${{ resultado_honorarios.monto_bruto|floatformat:"0g" }}</td></tr>
+      <tr><td class="texto-tenue">Retención</td><td class="col-monto texto-gasto">${{ resultado_honorarios.retencion|floatformat:"0g" }}</td></tr>
+      <tr><td><strong>Líquido a recibir</strong></td><td class="col-monto texto-ingreso"><strong>${{ resultado_honorarios.monto_liquido|floatformat:"0g" }}</strong></td></tr>
+    </table>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

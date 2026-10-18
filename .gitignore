@@ -1,0 +1,19 @@
+# Entorno virtual y caché de Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Base de datos local y archivos generados
+db.sqlite3
+staticfiles/
+
+# Secretos (nunca subir el .env real)
+.env
+
+# Editor / sistema
+.vscode/
+.idea/
+.claude/
+Thumbs.db
+desktop.ini

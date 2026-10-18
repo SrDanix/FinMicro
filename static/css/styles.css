@@ -1,0 +1,449 @@
+/* =========================================================================
+   FinMicro — Sistema de diseño
+   =========================================================================
+   Paleta: verde crecimiento + cobre (guiño a que Chile es el primer
+   productor mundial de cobre, y "libra_cobre" es uno de los indicadores
+   que consume core/services.py). Nada de fondo crema + acento terracota
+   genérico: acá el fondo tiene un leve tinte verde-gris y el acento es un
+   cobre más oscuro y metálico.
+
+   Tipografía: Space Grotesk para títulos y cifras grandes (geométrica,
+   con carácter), Inter para texto de interfaz (muy legible en tamaños
+   chicos), JetBrains Mono para montos en tablas (alineación tabular,
+   guiño a la precisión contable).
+
+   Elemento de firma: la tarjeta de "boleta" (.tarjeta-recibo) con borde
+   inferior perforado, como el talón de una boleta física — el objeto
+   cotidiano de un microempresario chileno.
+   ========================================================================= */
+
+:root {
+  /* Color */
+  --tinta: #14231c;
+  --tinta-suave: #4b5a52;
+  --fondo: #f3f5ef;
+  --superficie: #ffffff;
+  --borde: #dde1d6;
+  --borde-fuerte: #c3cabb;
+
+  --verde-900: #0f4a34;
+  --verde-700: #1b6b4e;
+  --verde-500: #2f9169;
+  --verde-100: #e2f0e7;
+
+  --cobre-700: #8a4a1f;
+  --cobre-500: #ab5f26;
+  --cobre-100: #f4e6d7;
+
+  --gasto-700: #8c2f2f;
+  --gasto-500: #b23b3b;
+  --gasto-100: #f6e3e1;
+
+  --info-500: #2f6f91;
+  --info-100: #e1eef4;
+
+  /* Tipografía */
+  --fuente-titulo: "Space Grotesk", "Inter", sans-serif;
+  --fuente-cuerpo: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --fuente-cifra: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Forma */
+  --radio-s: 8px;
+  --radio-m: 14px;
+  --radio-l: 22px;
+  --sombra-s: 0 1px 2px rgba(20, 35, 28, 0.06);
+  --sombra-m: 0 6px 20px rgba(20, 35, 28, 0.08);
+
+  --ancho-sidebar: 248px;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font-family: var(--fuente-cuerpo);
+  font-size: 15.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--fuente-titulo);
+  font-weight: 600;
+  line-height: 1.18;
+  margin: 0 0 0.5em;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.4rem; }
+h3 { font-size: 1.1rem; }
+p { margin: 0 0 1em; color: var(--tinta-suave); }
+a { color: var(--verde-700); text-decoration: none; }
+a:hover { text-decoration: underline; }
+small { color: var(--tinta-suave); }
+
+.cifra, .tabla td.col-monto, .tabla th.col-monto {
+  font-family: var(--fuente-cifra);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Foco visible en teclado, en todos los elementos interactivos */
+a:focus-visible, button:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, .btn:focus-visible {
+  outline: 2px solid var(--verde-500);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* =============================== Layout ================================ */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.barra-lateral {
+  width: var(--ancho-sidebar);
+  flex-shrink: 0;
+  background: var(--verde-900);
+  color: #eef4f0;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 16px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 22px;
+  color: #ffffff;
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.marca-icono {
+  width: 30px; height: 30px;
+  border-radius: 9px;
+  background: var(--cobre-500);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+}
+
+.nav-lateral { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.nav-lateral a {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px;
+  border-radius: var(--radio-s);
+  color: #cfe0d6;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.nav-lateral a svg { flex-shrink: 0; opacity: 0.85; }
+.nav-lateral a:hover { background: rgba(255,255,255,0.08); text-decoration: none; color: #fff; }
+.nav-lateral a.activo { background: var(--verde-700); color: #fff; }
+.nav-lateral a.activo svg { opacity: 1; }
+.nav-separador { height: 1px; background: rgba(255,255,255,0.12); margin: 12px 4px; }
+
+.tarjeta-cuenta {
+  border-top: 1px solid rgba(255,255,255,0.12);
+  padding-top: 14px;
+  margin-top: 10px;
+}
+.tarjeta-cuenta .negocio { color: #fff; font-weight: 600; font-size: 0.92rem; }
+.tarjeta-cuenta .rubro { font-size: 0.8rem; color: #a9bfb1; margin-bottom: 8px; }
+
+.contenido-principal { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.barra-superior {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px;
+  padding: 18px 32px;
+  border-bottom: 1px solid var(--borde);
+  background: var(--fondo);
+  position: sticky; top: 0; z-index: 5;
+}
+.barra-superior h1 { margin: 0; font-size: 1.35rem; }
+.boton-menu-movil { display: none; }
+
+main.contenedor { padding: 28px 32px 56px; max-width: 1080px; }
+main.contenedor.ancho-completo { max-width: none; }
+
+/* Layout público (landing, login, registro) */
+.barra-publica {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 32px;
+  max-width: 1180px; margin: 0 auto;
+}
+.acciones-publicas { display: flex; gap: 10px; align-items: center; }
+
+/* =============================== Botones ================================ */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--fuente-cuerpo);
+  font-size: 0.92rem; font-weight: 600;
+  padding: 10px 18px;
+  border-radius: var(--radio-s);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.05s ease, background 0.15s ease, border-color 0.15s ease;
+  line-height: 1.2;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primario { background: var(--verde-700); color: #fff; }
+.btn-primario:hover { background: var(--verde-900); text-decoration: none; }
+.btn-cobre { background: var(--cobre-500); color: #fff; }
+.btn-cobre:hover { background: var(--cobre-700); text-decoration: none; }
+.btn-secundario { background: var(--superficie); color: var(--tinta); border-color: var(--borde-fuerte); }
+.btn-secundario:hover { border-color: var(--verde-700); color: var(--verde-700); text-decoration: none; }
+.btn-fantasma { background: transparent; color: var(--tinta-suave); }
+.btn-fantasma:hover { background: rgba(20,35,28,0.06); text-decoration: none; }
+.btn-peligro { background: var(--superficie); color: var(--gasto-700); border-color: var(--gasto-100); }
+.btn-peligro:hover { background: var(--gasto-100); text-decoration: none; }
+.btn-bloque { width: 100%; }
+.btn-chico { padding: 6px 12px; font-size: 0.82rem; }
+.btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+
+/* =============================== Tarjetas ================================ */
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-m);
+  padding: 22px;
+  box-shadow: var(--sombra-s);
+}
+.tarjeta-titulo {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.tarjeta-titulo h2, .tarjeta-titulo h3 { margin: 0; }
+
+.grid { display: grid; gap: 20px; }
+.grid-2 { grid-template-columns: repeat(2, 1fr); }
+.grid-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 860px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Tarjeta "boleta": firma visual del producto — borde inferior perforado,
+   como el talón de una boleta física. */
+.tarjeta-recibo {
+  position: relative;
+  background: linear-gradient(180deg, var(--verde-900), var(--verde-700));
+  color: #fff;
+  border: none;
+  padding: 26px 26px 32px;
+  overflow: visible;
+}
+.tarjeta-recibo::after {
+  content: "";
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 16px;
+  background-image: radial-gradient(circle at 9px 0, var(--fondo) 8px, transparent 8.5px);
+  background-size: 18px 16px;
+  background-repeat: repeat-x;
+  background-position: -2px 0;
+}
+.tarjeta-recibo .etiqueta { color: #bcdbc9; font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.tarjeta-recibo .monto-grande {
+  font-family: var(--fuente-titulo);
+  font-size: 2.5rem;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 2px;
+}
+.tarjeta-recibo .monto-grande.negativo { color: #f6cccc; }
+
+.tarjeta-metrica .etiqueta { font-size: 0.82rem; color: var(--tinta-suave); font-weight: 600; }
+.tarjeta-metrica .valor { font-family: var(--fuente-titulo); font-size: 1.6rem; margin-top: 2px; }
+.tarjeta-metrica .valor.ingreso { color: var(--verde-700); }
+.tarjeta-metrica .valor.gasto { color: var(--gasto-700); }
+
+/* =============================== Insignias ================================ */
+
+.insignia {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.76rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+}
+.insignia-ingreso { background: var(--verde-100); color: var(--verde-900); }
+.insignia-gasto { background: var(--gasto-100); color: var(--gasto-700); }
+.insignia-premium { background: var(--cobre-100); color: var(--cobre-700); }
+.insignia-basico { background: #eef0e8; color: var(--tinta-suave); }
+.insignia-info { background: var(--info-100); color: var(--info-500); }
+
+/* =============================== Formularios ================================ */
+
+form .grupo-campo { margin-bottom: 18px; }
+label { display: block; font-weight: 600; font-size: 0.88rem; margin-bottom: 6px; }
+.texto-ayuda { font-size: 0.8rem; color: var(--tinta-suave); margin-top: 5px; }
+.texto-error { font-size: 0.8rem; color: var(--gasto-700); margin-top: 5px; font-weight: 600; }
+
+.campo-input, .campo-select,
+input[type="text"], input[type="email"], input[type="password"],
+input[type="number"], input[type="date"], select, textarea {
+  width: 100%;
+  font-family: var(--fuente-cuerpo);
+  font-size: 0.95rem;
+  padding: 10px 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-s);
+  background: var(--superficie);
+  color: var(--tinta);
+}
+.campo-textarea { min-height: 130px; resize: vertical; font-family: var(--fuente-cifra); }
+.campo-input:focus, select:focus, textarea:focus { border-color: var(--verde-500); }
+.errorlist { list-style: none; margin: 6px 0 0; padding: 0; color: var(--gasto-700); font-size: 0.8rem; font-weight: 600; }
+
+.check-linea { display: flex; align-items: center; gap: 8px; }
+.check-linea label { margin: 0; font-weight: 500; }
+.check-linea input { width: auto; }
+
+/* Selector segmentado (usado para "bruto" vs "líquido" en la calculadora de honorarios) */
+.segmentado { display: flex; border: 1px solid var(--borde-fuerte); border-radius: var(--radio-s); overflow: hidden; }
+.segmentado label {
+  flex: 1; text-align: center; margin: 0; padding: 10px 8px;
+  cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--tinta-suave);
+  background: var(--superficie); border-right: 1px solid var(--borde-fuerte);
+}
+.segmentado label:last-child { border-right: none; }
+.segmentado input { position: absolute; opacity: 0; pointer-events: none; }
+.segmentado input:checked + label,
+.segmentado label.activo { background: var(--verde-700); color: #fff; }
+
+/* =============================== Tablas ================================ */
+
+.tabla-envoltorio { overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tabla th {
+  text-align: left; font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--tinta-suave); padding: 10px 14px; border-bottom: 2px solid var(--borde);
+}
+.tabla td { padding: 12px 14px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.tabla tr:last-child td { border-bottom: none; }
+.tabla tr:hover td { background: rgba(27, 107, 78, 0.04); }
+.col-monto { text-align: right; white-space: nowrap; }
+.col-acciones { text-align: right; white-space: nowrap; }
+.col-acciones a, .col-acciones button { margin-left: 6px; }
+
+/* =============================== Mensajes / alertas ================================ */
+
+.mensajes { padding: 0 32px; }
+.aviso {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 13px 16px; border-radius: var(--radio-s);
+  margin-bottom: 14px; font-size: 0.9rem; font-weight: 500;
+  border: 1px solid transparent;
+}
+.aviso-exito { background: var(--verde-100); color: var(--verde-900); border-color: #bfe0cc; }
+.aviso-info, .aviso-debug { background: var(--info-100); color: #204a61; border-color: #c7dfea; }
+.aviso-alerta { background: var(--cobre-100); color: var(--cobre-700); border-color: #e8cca8; }
+.aviso-error { background: var(--gasto-100); color: var(--gasto-700); border-color: #e6bcbc; }
+
+/* =============================== Landing / marketing ================================ */
+
+.hero {
+  max-width: 1180px; margin: 0 auto; padding: 48px 32px 24px;
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 48px; align-items: center;
+}
+@media (max-width: 900px) { .hero { grid-template-columns: 1fr; padding-top: 20px; } }
+.hero-etiqueta {
+  display: inline-block; font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--verde-700); background: var(--verde-100);
+  padding: 5px 12px; border-radius: 99px; margin-bottom: 16px;
+}
+.hero h1 { font-size: 2.7rem; margin-bottom: 0.4em; }
+.hero p.subtitulo { font-size: 1.08rem; max-width: 46ch; }
+.hero-acciones { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+.hero-panel { background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio-l); padding: 24px; box-shadow: var(--sombra-m); }
+
+.franja { max-width: 1180px; margin: 0 auto; padding: 40px 32px; }
+.franja h2 { text-align: center; max-width: 46ch; margin: 0 auto 8px; }
+.franja p.intro { text-align: center; max-width: 56ch; margin: 0 auto 34px; }
+
+.cuadricula-caracteristicas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 860px) { .cuadricula-caracteristicas { grid-template-columns: 1fr; } }
+.tarjeta-caracteristica { padding: 22px; }
+.tarjeta-caracteristica .icono-envoltorio {
+  width: 42px; height: 42px; border-radius: 12px; background: var(--verde-100); color: var(--verde-700);
+  display: flex; align-items: center; justify-content: center; margin-bottom: 14px;
+}
+.tarjeta-caracteristica h3 { margin-bottom: 6px; font-size: 1.02rem; }
+.tarjeta-caracteristica p { font-size: 0.9rem; margin-bottom: 0; }
+
+.indicadores-tira { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 28px; }
+.indicador-chip {
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: var(--radio-s);
+  padding: 10px 16px; font-size: 0.84rem; display: flex; gap: 8px; align-items: baseline;
+}
+.indicador-chip strong { font-family: var(--fuente-cifra); font-size: 0.98rem; }
+
+.pie-publico { text-align: center; padding: 32px; color: var(--tinta-suave); font-size: 0.84rem; }
+
+/* =============================== Planes ================================ */
+
+.tarjeta-plan { display: flex; flex-direction: column; padding: 26px; position: relative; }
+.tarjeta-plan--destacada { border: 2px solid var(--cobre-500); }
+.tarjeta-plan .cinta {
+  position: absolute; top: -12px; right: 20px;
+  background: var(--cobre-500); color: #fff; font-size: 0.72rem; font-weight: 700;
+  padding: 4px 12px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.03em;
+}
+.tarjeta-plan .precio { font-family: var(--fuente-titulo); font-size: 2.1rem; margin: 10px 0 2px; }
+.tarjeta-plan .precio span { font-size: 0.95rem; font-weight: 500; color: var(--tinta-suave); }
+.tarjeta-plan ul { list-style: none; padding: 0; margin: 18px 0 22px; flex: 1; }
+.tarjeta-plan li { display: flex; gap: 9px; align-items: flex-start; padding: 6px 0; font-size: 0.9rem; }
+.tarjeta-plan li svg { flex-shrink: 0; margin-top: 3px; color: var(--verde-700); }
+
+/* =============================== Estados vacíos ================================ */
+
+.estado-vacio {
+  text-align: center; padding: 48px 20px; color: var(--tinta-suave);
+}
+.estado-vacio svg { color: var(--borde-fuerte); margin-bottom: 12px; }
+.estado-vacio h3 { color: var(--tinta); margin-bottom: 6px; }
+
+/* =============================== Utilidades ================================ */
+
+.texto-ingreso { color: var(--verde-700); }
+.texto-gasto { color: var(--gasto-700); }
+.texto-tenue { color: var(--tinta-suave); }
+.texto-centro { text-align: center; }
+.mt-0 { margin-top: 0; }
+.flex-entre { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pila { display: flex; flex-direction: column; gap: 14px; }
+.separador-v { height: 1px; background: var(--borde); margin: 20px 0; }
+
+/* =============================== Responsive: sidebar -> barra inferior ================================ */
+
+@media (max-width: 880px) {
+  .app-shell { flex-direction: column; }
+  .barra-lateral {
+    position: fixed; z-index: 20; height: 100vh; transform: translateX(-100%);
+    transition: transform 0.2s ease; box-shadow: var(--sombra-m);
+  }
+  .barra-lateral.abierta { transform: translateX(0); }
+  .boton-menu-movil {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: var(--radio-s);
+    background: var(--superficie); border: 1px solid var(--borde-fuerte); color: var(--tinta);
+  }
+  .barra-superior { padding: 14px 16px; }
+  main.contenedor { padding: 18px 16px 40px; }
+  .mensajes { padding: 0 16px; }
+  .hero { padding: 28px 20px; }
+  .franja { padding: 30px 20px; }
+  .barra-publica { padding: 16px 20px; }
+}

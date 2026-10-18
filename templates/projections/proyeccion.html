@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Proyección de ingresos{% endblock %}
+{% block titulo_pagina %}Proyección de ingresos{% endblock %}
+
+{% block contenido %}
+{% if suficientes_datos %}
+<div class="grid grid-3">
+  {% for valor in proyeccion %}
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Mes +{{ forloop.counter }}</div>
+    <div class="valor ingreso cifra">${{ valor|floatformat:"0g" }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Historial y proyección</h3></div>
+  <canvas id="graficoProyeccion" height="110"></canvas>
+  <p class="texto-ayuda">Proyección por tendencia lineal de tus ingresos de los últimos 6 meses. Es una estimación, no una garantía.</p>
+</div>
+{% else %}
+<div class="tarjeta estado-vacio">
+  <h3>Faltan datos para proyectar</h3>
+  <p class="texto-tenue">Necesitas ingresos registrados en al menos 2 de los últimos 6 meses.</p>
+  <a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">Registrar un ingreso</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts_extra %}
+{% if suficientes_datos %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  (function () {
+    if (typeof Chart === "undefined") return;
+    const datos = {{ grafico_datos|safe }};
+    new Chart(document.getElementById("graficoProyeccion"), {
+      type: "line",
+      data: {
+        labels: datos.etiquetas,
+        datasets: [
+          { label: "Ingresos reales", data: datos.historial, borderColor: "#1b6b4e", backgroundColor: "#1b6b4e", tension: 0.25 },
+          { label: "Proyección", data: datos.proyeccion, borderColor: "#c27a2c", backgroundColor: "#c27a2c", borderDash: [6, 4], tension: 0.25 },
+        ],
+      },
+      options: { responsive: true, spanGaps: false, scales: { y: { beginAtZero: true } } },
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Evaluador de viabilidad{% endblock %}
+{% block titulo_pagina %}Evaluador de viabilidad{% endblock %}
+
+{% block contenido %}
+<div class="grid grid-2">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Datos del proyecto</h3></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario">Evaluar</button>
+    </form>
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Resultado</h3></div>
+    {% if resultado %}
+      <p>
+        {% if resultado.viable %}<span class="insignia insignia-ingreso">Viable</span> El proyecto genera valor a una tasa de {{ resultado.tasa_descuento_porcentaje }}%.
+        {% else %}<span class="insignia insignia-gasto">No viable</span> El proyecto no recupera su costo a una tasa de {{ resultado.tasa_descuento_porcentaje }}%.{% endif %}
+      </p>
+      <table class="tabla">
+        <tr><td class="texto-tenue">VAN</td><td class="col-monto {% if resultado.viable %}texto-ingreso{% else %}texto-gasto{% endif %}">${{ resultado.van|floatformat:"0g" }}</td></tr>
+        <tr><td class="texto-tenue">TIR</td><td class="col-monto">{% if resultado.tir_porcentaje is not None %}{{ resultado.tir_porcentaje }}%{% else %}—{% endif %}</td></tr>
+        <tr><td class="texto-tenue">Payback (períodos)</td><td class="col-monto">{% if resultado.payback_periodos is not None %}{{ resultado.payback_periodos }}{% else %}No se recupera{% endif %}</td></tr>
+        <tr><td class="texto-tenue">Beneficio / costo</td><td class="col-monto">{{ resultado.beneficio_costo|default:"—" }}</td></tr>
+      </table>
+    {% else %}
+      <p class="texto-tenue">Ingresa la inversión, la tasa y los flujos esperados para ver el VAN, la TIR y el payback.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

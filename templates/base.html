@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}FinMicro{% endblock %} · FinMicro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+<div class="app-shell">
+  <div class="fondo-movil" id="fondoMovil" onclick="document.getElementById('barraLateral').classList.remove('abierta'); this.style.display='none';" style="display:none; position:fixed; inset:0; background:rgba(20,35,28,0.4); z-index:15;"></div>
+
+  <aside class="barra-lateral" id="barraLateral">
+    <div class="marca">
+      <span class="marca-icono">F</span> FinMicro
+    </div>
+
+    <nav class="nav-lateral">
+      <a href="{% url 'finances:dashboard' %}" class="{% if '/finanzas/' in request.path and 'movimientos' not in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+        Panel
+      </a>
+      <a href="{% url 'finances:listar_movimientos' %}" class="{% if 'movimientos' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><path d="M9 8h6M9 12h6"/></svg>
+        Movimientos
+      </a>
+      <a href="{% url 'taxes:calculadora' %}" class="{% if '/impuestos/' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7.5h8M8 12h2M12 12h2M16 12h2M8 16h2M12 16h2M16 16h2"/></svg>
+        Impuestos
+      </a>
+      <a href="{% url 'projections:proyeccion_ingresos' %}" class="{% if 'proyecciones/ingresos' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M6 15l4-5 3 3 5-7"/></svg>
+        Proyección de ingresos
+      </a>
+      <a href="{% url 'projections:evaluador_viabilidad' %}" class="{% if 'viabilidad' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/></svg>
+        Evaluador de viabilidad
+        {% if not es_premium %}<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="margin-left:auto; color:#e8b979;"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"/></svg>{% endif %}
+      </a>
+
+      <div class="nav-separador"></div>
+
+      <a href="{% url 'subscriptions:planes' %}" class="{% if 'suscripcion' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6-4.6-4.1 6.1-.6z"/></svg>
+        Planes
+        {% if es_premium %}<span class="insignia insignia-premium" style="margin-left:auto;">Premium</span>{% endif %}
+      </a>
+      <a href="{% url 'accounts:perfil' %}" class="{% if 'perfil' in request.path %}activo{% endif %}">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.4-4.5 5-6 8-6s6.6 1.5 8 6"/></svg>
+        Mi perfil
+      </a>
+    </nav>
+
+    <div class="tarjeta-cuenta">
+      <div class="negocio">{{ user.nombre_negocio }}</div>
+      <div class="rubro">{{ user.get_tipo_negocio_display }}</div>
+      <form method="post" action="{% url 'accounts:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-fantasma btn-chico" style="color:#cfe0d6; padding-left:0;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9"/><path d="M20 12H10M20 12l-3-3M20 12l-3 3"/></svg>
+          Cerrar sesión
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  <div class="contenido-principal">
+    <header class="barra-superior">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="boton-menu-movil" onclick="document.getElementById('barraLateral').classList.add('abierta'); document.getElementById('fondoMovil').style.display='block';" aria-label="Abrir menú">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+        <h1>{% block titulo_pagina %}{% endblock %}</h1>
+      </div>
+      {% block acciones_barra %}{% endblock %}
+    </header>
+
+    <div class="mensajes">
+      {% for message in messages %}
+        <div class="aviso {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    </div>
+
+    <main class="contenedor{% block ancho_completo %}{% endblock %}">
+      {% block contenido %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+{% else %}
+
+<header class="barra-publica">
+  <a href="{% url 'core:home' %}" class="marca" style="color:var(--tinta);">
+    <span class="marca-icono">F</span> FinMicro
+  </a>
+  <div class="acciones-publicas">
+    <a href="{% url 'accounts:login' %}" class="btn btn-fantasma">Iniciar sesión</a>
+    <a href="{% url 'accounts:registro' %}" class="btn btn-primario">Crear cuenta gratis</a>
+  </div>
+</header>
+
+<div class="mensajes" style="padding:0 32px; max-width:1180px; margin:0 auto;">
+  {% for message in messages %}
+    <div class="aviso {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+
+{% block contenido_publico %}{% endblock %}
+
+<footer class="pie-publico">
+  FinMicro — Plataforma de gestión financiera para microempresarios chilenos.
+</footer>
+
+{% endif %}
+
+{% block scripts_extra %}{% endblock %}
+</body>
+</html>

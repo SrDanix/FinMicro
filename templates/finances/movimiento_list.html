@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Movimientos{% endblock %}
+{% block titulo_pagina %}Movimientos{% endblock %}
+
+{% block acciones_barra %}
+<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>
+{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta">
+  <form method="get" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+    {% for field in form %}
+      <div class="grupo-campo" style="margin:0; min-width:140px;">
+        {{ field.label_tag }}
+        {{ field }}
+        {% for error in field.errors %}<p class="texto-error">{{ error }}</p>{% endfor %}
+      </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-secundario">Filtrar</button>
+    <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma">Limpiar</a>
+  </form>
+</div>
+
+<div class="tarjeta" style="margin-top:20px;">
+  {% if movimientos %}
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead>
+        <tr><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th class="col-monto">Monto</th><th class="col-acciones"></th></tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td>{{ m.fecha|date:"d/m/Y" }}</td>
+          <td><span class="insignia {% if m.tipo == 'ingreso' %}insignia-ingreso{% else %}insignia-gasto{% endif %}">{{ m.get_tipo_display }}</span></td>
+          <td>{{ m.categoria.nombre }}</td>
+          <td class="texto-tenue">{{ m.descripcion|default:"—" }}</td>
+          <td class="col-monto {% if m.tipo == 'ingreso' %}texto-ingreso{% else %}texto-gasto{% endif %}">${{ m.monto|floatformat:"0g" }}</td>
+          <td class="col-acciones">
+            <a href="{% url 'finances:editar_movimiento' m.pk %}" class="btn btn-secundario btn-chico">Editar</a>
+            <a href="{% url 'finances:eliminar_movimiento' m.pk %}" class="btn btn-peligro btn-chico">Eliminar</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="estado-vacio">
+    <h3>No hay movimientos</h3>
+    <p class="texto-tenue">No se encontraron movimientos con esos filtros.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

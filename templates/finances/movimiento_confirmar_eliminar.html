@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Eliminar movimiento{% endblock %}
+{% block titulo_pagina %}Eliminar movimiento{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:460px;">
+  <p>¿Seguro que quieres eliminar este movimiento? Esta acción no se puede deshacer.</p>
+  <div class="tarjeta" style="background:var(--fondo); margin:16px 0;">
+    <div class="flex-entre"><span class="texto-tenue">Fecha</span><span>{{ movimiento.fecha|date:"d/m/Y" }}</span></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Categoría</span><span>{{ movimiento.categoria.nombre }}</span></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Monto</span><strong class="cifra">${{ movimiento.monto|floatformat:"0g" }}</strong></div>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="flex-entre">
+      <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma">Cancelar</a>
+      <button type="submit" class="btn btn-peligro">Sí, eliminar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

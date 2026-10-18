@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Planes{% endblock %}
+{% block titulo_pagina %}Planes{% endblock %}
+
+{% block contenido %}
+<p class="texto-tenue" style="max-width:60ch; margin-bottom:24px;">
+  Empiezas gratis en el Plan Básico. Sube a Premium cuando tu negocio necesite
+  movimientos ilimitados y el evaluador de viabilidad (VAN, TIR, Payback).
+</p>
+
+<div class="grid grid-2" style="align-items:stretch;">
+  {% for plan in planes %}
+  <div class="tarjeta tarjeta-plan {% if plan.codigo == 'premium' %}tarjeta-plan--destacada{% endif %}">
+    {% if plan.codigo == 'premium' %}<span class="cinta">Recomendado</span>{% endif %}
+    <h3 style="margin-bottom:0;">{{ plan.nombre }}</h3>
+    <div class="precio">
+      {% if plan.precio_mensual_clp == 0 %}Gratis{% else %}${{ plan.precio_mensual_clp }}<span>/mes</span>{% endif %}
+    </div>
+    <p class="texto-tenue" style="font-size:0.88rem;">{{ plan.descripcion }}</p>
+
+    <ul>
+      <li>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+        {% if plan.limite_movimientos_mensuales %}Hasta {{ plan.limite_movimientos_mensuales }} movimientos al mes{% else %}Movimientos ilimitados{% endif %}
+      </li>
+      <li>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+        Calculadora de IVA y boletas de honorarios
+      </li>
+      {% if plan.incluye_proyecciones %}
+      <li>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+        Proyección de ingresos
+      </li>
+      {% endif %}
+      {% if plan.incluye_evaluador_viabilidad %}
+      <li>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+        Evaluador de viabilidad (VAN, TIR, Payback)
+      </li>
+      {% endif %}
+      <li>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg>
+        {% if plan.con_publicidad %}Con publicidad{% else %}Sin publicidad{% endif %}
+      </li>
+    </ul>
+
+    {% if suscripcion_activa and suscripcion_activa.plan_id == plan.id %}
+      <button class="btn btn-secundario btn-bloque" disabled>Tu plan actual</button>
+    {% else %}
+      <a href="{% url 'subscriptions:suscribirse' plan.codigo %}" class="btn {% if plan.codigo == 'premium' %}btn-cobre{% else %}btn-secundario{% endif %} btn-bloque">
+        {% if plan.codigo == 'premium' %}Elegir Premium{% else %}Cambiar a Básico{% endif %}
+      </a>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

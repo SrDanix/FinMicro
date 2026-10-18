@@ -1,0 +1,44 @@
+
+{% extends "base.html" %}
+{% block title %}Confirmar {{ plan.nombre }}{% endblock %}
+{% block titulo_pagina %}Confirmar cambio de plan{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:460px;">
+  <h2 style="margin-bottom:6px;">{{ plan.nombre }}</h2>
+  <p class="texto-tenue">{{ plan.descripcion }}</p>
+
+  {% if plan.codigo == "basico" %}
+    <p>¿Confirmas que quieres cambiar al Plan Básico? Perderás el acceso a movimientos
+    ilimitados y al evaluador de viabilidad si estabas en Premium.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="flex-entre">
+        <a href="{% url 'subscriptions:planes' %}" class="btn btn-fantasma">Cancelar</a>
+        <button type="submit" class="btn btn-primario">Sí, cambiar a Básico</button>
+      </div>
+    </form>
+
+  {% else %}
+    <p>Elige cómo quieres pagar tu suscripción de <strong class="cifra">${{ plan.precio_mensual_clp }}</strong> mensuales.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="grupo-campo">
+        <div class="segmentado">
+          <input type="radio" name="pasarela" id="pasarela-khipu" value="khipu" checked>
+          <label for="pasarela-khipu">Khipu</label>
+          <input type="radio" name="pasarela" id="pasarela-flow" value="flow">
+          <label for="pasarela-flow">Flow.cl</label>
+        </div>
+      </div>
+      <div class="flex-entre">
+        <a href="{% url 'subscriptions:planes' %}" class="btn btn-fantasma">Cancelar</a>
+        <button type="submit" class="btn btn-cobre">Continuar al pago</button>
+      </div>
+    </form>
+    <p class="texto-ayuda" style="margin-top:16px;">
+      Se te redirigirá a la pasarela elegida para completar el pago de forma segura.
+    </p>
+  {% endif %}
+</div>
+{% endblock %}

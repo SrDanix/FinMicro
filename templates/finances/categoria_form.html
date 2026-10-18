@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Nueva categoría{% endblock %}
+{% block titulo_pagina %}Nueva categoría{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:480px;">
+  <p class="texto-tenue">Las categorías que crees solo las verás tú.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "partials/_campos_formulario.html" %}
+    <div class="flex-entre">
+      <a href="{% url 'finances:crear_movimiento' %}" class="btn btn-fantasma">Cancelar</a>
+      <button type="submit" class="btn btn-primario">Crear categoría</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

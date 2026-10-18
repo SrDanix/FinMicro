@@ -1,0 +1,38 @@
+
+{% extends "base.html" %}
+{% block title %}Mi perfil{% endblock %}
+{% block titulo_pagina %}Mi perfil{% endblock %}
+
+{% block contenido %}
+<div class="grid grid-2">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h2>Datos del negocio</h2></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario">Guardar cambios</button>
+    </form>
+  </div>
+
+  <div class="pila">
+    <div class="tarjeta">
+      <div class="tarjeta-titulo"><h3>Tu cuenta</h3></div>
+      <table class="tabla">
+        <tr><td class="texto-tenue">Usuario</td><td>{{ user.username }}</td></tr>
+        <tr><td class="texto-tenue">RUT</td><td>{{ user.rut }}</td></tr>
+        <tr><td class="texto-tenue">Plan actual</td><td>
+          {% if es_premium %}<span class="insignia insignia-premium">Premium</span>{% else %}<span class="insignia insignia-basico">Básico</span>{% endif %}
+        </td></tr>
+        <tr><td class="texto-tenue">Miembro desde</td><td>{{ user.fecha_registro|date:"d/m/Y" }}</td></tr>
+      </table>
+      <a href="{% url 'accounts:password_change' %}" class="btn btn-secundario btn-bloque" style="margin-top:16px;">Cambiar contraseña</a>
+    </div>
+
+    <div class="tarjeta">
+      <div class="tarjeta-titulo"><h3>Suscripción</h3></div>
+      <p class="texto-tenue" style="margin-bottom:14px;">Administra tu plan o revisa tu historial de pagos.</p>
+      <a href="{% url 'subscriptions:mi_suscripcion' %}" class="btn btn-secundario btn-bloque">Ver mi suscripción</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
