@@ -1,0 +1,19 @@
+# Levanta FinMicro con un solo comando:  docker compose up --build
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"          # puerto de tu PC : puerto del contenedor
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_HTTPS: "False"  # en tu PC no hay HTTPS; en un servidor real, quítalo
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:8000,http://127.0.0.1:8000"
+      DJANGO_SECRET_KEY: "cambia-esto-por-una-clave-larga-y-secreta"
+      SQLITE_PATH: "/app/data/db.sqlite3"
+      PAGOS_MODO_SIMULADO: "True"
+    volumes:
+      - finmicro_datos:/app/data   # la base de datos vive aquí y no se borra
+
+volumes:
+  finmicro_datos:
