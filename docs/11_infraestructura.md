@@ -34,9 +34,9 @@ de acceso para el raíz.
 
 | Ambiente | Dónde | Cómo se levanta | Base de datos | Correo |
 |---|---|---|---|---|
-| **Desarrollo** | PC de cada integrante | `python manage.py runserver` o `docker compose up --build` | SQLite local | Consola |
-| **Integración (CI)** | GitHub Actions | Automático en cada push y PR a `main` | SQLite efímera | En memoria |
-| **Producción** | EC2 + Nginx + HTTPS | `docker compose -f docker-compose.prod.yml up -d --build` | SQLite en volumen (E0) | SMTP (SES) |
+| **Desarrollo** | PC de cada integrante | `python manage.py runserver` (SQLite) o `docker compose up --build` (PostgreSQL) | SQLite o PostgreSQL local | Consola |
+| **Integración (CI)** | GitHub Actions | Automático en cada push y PR a `main` | SQLite **y** PostgreSQL 17 efímeras | En memoria |
+| **Producción** | EC2 + Nginx + HTTPS | `docker compose -f docker-compose.prod.yml up -d --build` | Amazon RDS PostgreSQL ([doc 17](17_base_de_datos_aws.md)) o SQLite en volumen (E0) | SMTP (SES) |
 
 **CI** ([.github/workflows/ci.yml](../.github/workflows/ci.yml)): instala dependencias,
 verifica que no falten migraciones, corre las pruebas, ejecuta el checklist de

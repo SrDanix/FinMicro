@@ -28,7 +28,7 @@ momento de cada cambio.
 
 ## Qué ya está preparado en el código
 
-- **Base de datos intercambiable:** `settings.py` usa PostgreSQL con solo definir `DB_ENGINE=postgresql` y los `DB_*` en el `.env`. La migración E0→E1 es: respaldo → `dumpdata` → `migrate` en RDS → `loaddata` → cambiar `.env`.
+- **Base de datos intercambiable:** `settings.py` usa PostgreSQL con solo definir `DB_ENGINE=postgresql` y los `DB_*` en el `.env`, con SSL y reutilización de conexiones. La CI prueba en SQLite y en PostgreSQL 17. Guía paso a paso de RDS y de la migración de datos: [17_base_de_datos_aws.md](17_base_de_datos_aws.md).
 - **Aplicación sin estado local:** las sesiones están en la base de datos y los estáticos se generan en la imagen; se pueden levantar varias copias detrás de un balanceador (E2) sin cambios de código.
 - **Caché centralizable:** `CACHES` usa memoria local; en E1 se cambia a Redis (`django-redis`) para compartirla entre workers.
 - **Cálculos aislados en `services.py`:** se pueden mover a workers asíncronos (E3) sin reescribirlos.
