@@ -9,7 +9,8 @@ class MovimientoForm(forms.ModelForm):
         model = Movimiento
         fields = ["tipo", "categoria", "monto", "fecha", "descripcion"]
         widgets = {
-            "fecha": forms.DateInput(attrs={"type": "date"}),
+            # <input type="date"> solo acepta AAAA-MM-DD, no el formato local.
+            "fecha": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "descripcion": forms.TextInput(attrs={"placeholder": "Opcional"}),
         }
 

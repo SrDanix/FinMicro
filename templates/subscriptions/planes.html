@@ -14,7 +14,7 @@
     {% if plan.codigo == 'premium' %}<span class="cinta">Recomendado</span>{% endif %}
     <h3 style="margin-bottom:0;">{{ plan.nombre }}</h3>
     <div class="precio">
-      {% if plan.precio_mensual_clp == 0 %}Gratis{% else %}${{ plan.precio_mensual_clp }}<span>/mes</span>{% endif %}
+      {% if plan.precio_mensual_clp == 0 %}Gratis{% else %}${{ plan.precio_mensual_clp|floatformat:"0g" }}<span>/mes</span>{% endif %}
     </div>
     <p class="texto-tenue" style="font-size:0.88rem;">{{ plan.descripcion }}</p>
 

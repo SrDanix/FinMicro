@@ -20,7 +20,7 @@
     </form>
 
   {% else %}
-    <p>Elige cómo quieres pagar tu suscripción de <strong class="cifra">${{ plan.precio_mensual_clp }}</strong> mensuales.</p>
+    <p>Elige cómo quieres pagar tu suscripción de <strong class="cifra">${{ plan.precio_mensual_clp|floatformat:"0g" }}</strong> mensuales.</p>
     <form method="post">
       {% csrf_token %}
       <div class="grupo-campo">

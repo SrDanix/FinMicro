@@ -13,7 +13,7 @@
   </p>
   <div class="tarjeta" style="background:var(--fondo); margin:18px 0;">
     <div class="flex-entre"><span class="texto-tenue">Plan</span><strong>{{ suscripcion.plan.nombre }}</strong></div>
-    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Monto</span><strong class="cifra">${{ suscripcion.plan.precio_mensual_clp }}</strong></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Monto</span><strong class="cifra">${{ suscripcion.plan.precio_mensual_clp|floatformat:"0g" }}</strong></div>
     <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">Referencia</span><span class="cifra" style="font-size:0.82rem;">{{ suscripcion.referencia_pago }}</span></div>
   </div>
   <form method="post">
