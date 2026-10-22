@@ -3,7 +3,7 @@
 {% block titulo_pagina %}Movimientos{% endblock %}
 
 {% block acciones_barra %}
-<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>
+{% if puede_editar %}<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>{% endif %}
 {% endblock %}
 
 {% block contenido %}
@@ -37,8 +37,10 @@
           <td class="texto-tenue">{{ m.descripcion|default:"—" }}</td>
           <td class="col-monto {% if m.tipo == 'ingreso' %}texto-ingreso{% else %}texto-gasto{% endif %}">${{ m.monto|floatformat:"0g" }}</td>
           <td class="col-acciones">
+            {% if puede_editar %}
             <a href="{% url 'finances:editar_movimiento' m.pk %}" class="btn btn-secundario btn-chico">Editar</a>
             <a href="{% url 'finances:eliminar_movimiento' m.pk %}" class="btn btn-peligro btn-chico">Eliminar</a>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}

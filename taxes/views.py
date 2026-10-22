@@ -49,6 +49,7 @@ def calculadora(request):
             "resultado_iva": resultado_iva,
             "resultado_honorarios": resultado_honorarios,
             "pestana_activa": pestana_activa,
-            "mostrar_honorarios": request.user.emite_boletas_honorarios,
+            "mostrar_honorarios": request.negocio.emite_boletas_honorarios,
+            "afecto_iva": request.negocio.afecto_iva,
         },
     )

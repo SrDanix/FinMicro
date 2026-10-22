@@ -43,12 +43,26 @@ ALLOWED_HOSTS = [h.strip() for h in os.environ.get("DJANGO_ALLOWED_HOSTS", "loca
 if not DEBUG:
     # Lista mínima recomendada por el checklist de despliegue de Django
     # cuando DEBUG=False (settings-in-production). Requiere servir el
-    # sitio bajo HTTPS.
-    SECURE_SSL_REDIRECT = _env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 7
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # sitio bajo HTTPS. Para probar sin HTTPS (p. ej. Docker en tu PC),
+    # define DJANGO_HTTPS=False.
+    _https = _env_bool("DJANGO_HTTPS", True)
+    SECURE_SSL_REDIRECT = _https
+    SESSION_COOKIE_SECURE = _https
+    CSRF_COOKIE_SECURE = _https
+    if _https:
+        # Nginx termina el HTTPS y avisa con esta cabecera (deploy/nginx).
+        SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+        SECURE_HSTS_SECONDS = 60 * 60 * 24 * 7
+        SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+# HSTS preload inscribe el dominio en la lista de los navegadores y es
+# difícil de revertir; se decidirá con el dominio definitivo (doc 11).
+SILENCED_SYSTEM_CHECKS = ["security.W021"]
+
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()
+]
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -68,10 +82,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sirve /static/ también con DEBUG=False (Docker / producción).
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # request.negocio / request.rol_negocio (colaboradores, ver accounts/negocio.py)
+    'accounts.negocio.NegocioActivoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -103,6 +121,18 @@ LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "finances:dashboard"
 LOGOUT_REDIRECT_URL = "core:home"
 
+# --- Correo (recuperación de contraseña, invitaciones) ---
+# Por defecto los correos se imprimen en la consola del servidor. En
+# producción, define EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# y los EMAIL_* de tu proveedor (p. ej. Amazon SES) en el .env.
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", True)
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "FinMicro <no-responder@finmicro.cl>")
+
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
@@ -125,7 +155,8 @@ else:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
+            # En Docker apunta a un volumen para que los datos sobrevivan.
+            "NAME": os.environ.get("SQLITE_PATH", BASE_DIR / "db.sqlite3"),
         }
     }
  

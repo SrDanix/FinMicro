@@ -15,7 +15,7 @@ class RecorridoCompletoTests(TestCase):
             {
                 "username": "feriante",
                 "email": "feriante@example.com",
-                "rut": "12345678-9",
+                "rut": "12345678-5",
                 "nombre_negocio": "Verduras Don Pepe",
                 "tipo_negocio": "FL",
                 "password1": "UnaClaveSegura.2026",

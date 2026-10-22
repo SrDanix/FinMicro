@@ -3,7 +3,7 @@
 {% block titulo_pagina %}Panel{% endblock %}
 
 {% block acciones_barra %}
-<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>
+{% if puede_editar %}<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>{% endif %}
 {% endblock %}
 
 {% block contenido %}
@@ -28,6 +28,18 @@
     <div class="valor gasto cifra">${{ resumen.gastos|floatformat:"0g" }}</div>
   </div>
 </div>
+
+{% if meta_ventas %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="flex-entre">
+    <strong>Meta de ventas del mes</strong>
+    <span class="cifra texto-tenue">${{ resumen.ingresos|floatformat:"0g" }} de ${{ meta_ventas|floatformat:"0g" }} ({{ avance_meta }}%)</span>
+  </div>
+  <div class="barra-progreso" role="progressbar" aria-valuenow="{{ avance_meta }}" aria-valuemin="0" aria-valuemax="100">
+    <div style="width: {{ avance_meta }}%;"></div>
+  </div>
+</div>
+{% endif %}
 
 <div class="grid grid-2" style="margin-top:20px;">
   <div class="tarjeta">

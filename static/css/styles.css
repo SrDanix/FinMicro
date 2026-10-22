@@ -447,3 +447,11 @@ input[type="number"], input[type="date"], select, textarea {
   .franja { padding: 30px 20px; }
   .barra-publica { padding: 16px 20px; }
 }
+/* ===================== Sprint 1: meta, negocio activo ==================== */
+.barra-progreso { height: 10px; background: var(--borde); border-radius: 999px; overflow: hidden; margin-top: 10px; }
+.barra-progreso > div { height: 100%; background: var(--verde-700); border-radius: 999px; transition: width .3s; }
+.selector-negocio { margin: 0 0 14px; }
+.selector-negocio label { display: block; font-size: 0.75rem; color: #a9bfb1; margin-bottom: 4px; }
+.selector-negocio select { width: 100%; background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 7px 8px; font: inherit; font-size: 0.85rem; }
+.selector-negocio select option { color: #14231c; }
+.contador-nav { margin-left: auto; background: var(--cobre-500); color: #fff; border-radius: 999px; font-size: 0.72rem; padding: 1px 7px; }

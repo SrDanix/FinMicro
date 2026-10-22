@@ -33,6 +33,13 @@
       <p class="texto-tenue" style="margin-bottom:14px;">Administra tu plan o revisa tu historial de pagos.</p>
       <a href="{% url 'subscriptions:mi_suscripcion' %}" class="btn btn-secundario btn-bloque">Ver mi suscripción</a>
     </div>
+
+    <div class="tarjeta">
+      <div class="tarjeta-titulo"><h3>Tus datos personales</h3></div>
+      <p class="texto-tenue" style="margin-bottom:14px;">Conforme a la Ley N°19.628, puedes descargar toda tu información o eliminar tu cuenta.</p>
+      <a href="{% url 'accounts:exportar_datos' %}" class="btn btn-secundario btn-bloque">Descargar mis datos (JSON)</a>
+      <a href="{% url 'accounts:eliminar_cuenta' %}" class="btn btn-peligro btn-bloque" style="margin-top:8px;">Eliminar mi cuenta</a>
+    </div>
   </div>
 </div>
 {% endblock %}

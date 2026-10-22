@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Colaboradores{% endblock %}
+{% block titulo_pagina %}Colaboradores{% endblock %}
+
+{% block contenido %}
+{% if recibidas %}
+<div class="tarjeta" style="margin-bottom:20px; border-color:var(--cobre-500);">
+  <div class="tarjeta-titulo"><h3>Invitaciones para ti</h3></div>
+  {% for inv in recibidas %}
+    <div class="flex-entre" style="padding:8px 0;">
+      <span><strong>{{ inv.propietario.nombre_negocio }}</strong> te invitó ({{ inv.get_rol_display|lower }}).</span>
+      <form method="post" action="{% url 'accounts:aceptar_invitacion' inv.token %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primario btn-chico">Aceptar</button>
+      </form>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="grid grid-2">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Invitar a alguien a tu negocio</h3></div>
+    <p class="texto-tenue" style="font-size:0.88rem;">
+      Por ejemplo, a tu contador o a un socio. La persona debe crear su cuenta en FinMicro
+      con el mismo correo para aceptar.
+    </p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario">Enviar invitación</button>
+    </form>
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Personas con acceso a tu negocio</h3></div>
+    {% if otorgadas %}
+    <div class="tabla-envoltorio">
+      <table class="tabla">
+        <tbody>
+          {% for c in otorgadas %}
+          <tr>
+            <td>
+              {{ c.email }}
+              <div class="texto-tenue" style="font-size:0.8rem;">{{ c.get_rol_display }}</div>
+            </td>
+            <td>
+              {% if c.estado == "aceptada" %}<span class="insignia insignia-ingreso">Activo</span>
+              {% else %}<span class="insignia insignia-info">Pendiente</span>{% endif %}
+            </td>
+            <td class="col-acciones">
+              {% if c.estado == "pendiente" %}
+                <button type="button" class="btn btn-fantasma btn-chico" onclick="navigator.clipboard.writeText('{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:aceptar_invitacion' c.token %}'); this.textContent='¡Copiado!';">Copiar enlace</button>
+              {% endif %}
+              <form method="post" action="{% url 'accounts:revocar_colaborador' c.pk %}" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-peligro btn-chico">Quitar</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="texto-tenue">Todavía no has invitado a nadie.</p>
+    {% endif %}
+  </div>
+</div>
+
+{% if accesos %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Negocios en los que colaboras</h3></div>
+  <p class="texto-ayuda" style="margin-top:0;">Cambia de negocio con el selector de la barra lateral.</p>
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <tbody>
+        {% for c in accesos %}
+        <tr>
+          <td>{{ c.propietario.nombre_negocio }}</td>
+          <td class="texto-tenue">{{ c.get_rol_display }}</td>
+          <td class="col-acciones">
+            <form method="post" action="{% url 'accounts:abandonar_negocio' c.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-fantasma btn-chico">Dejar de colaborar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
