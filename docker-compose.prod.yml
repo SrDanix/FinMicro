@@ -1,6 +1,10 @@
 # Producción en la instancia EC2 (detrás de Nginx con HTTPS).
 # Uso:  docker compose -f docker-compose.prod.yml up -d --build
+#
 # Las variables se leen del archivo .env del servidor (ver .env.example).
+# - Con AWS RDS: define DB_ENGINE=postgresql, DB_HOST=<endpoint de RDS>,
+#   DB_SSLMODE=require y el resto de DB_* (docs/17_base_de_datos_aws.md).
+# - Sin DB_ENGINE: usa SQLite en el volumen (etapa E0 del plan de escalamiento).
 services:
   web:
     build: .

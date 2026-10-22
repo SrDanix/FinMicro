@@ -149,6 +149,14 @@ if os.environ.get("DB_ENGINE") == "postgresql":
             "PASSWORD": os.environ.get("DB_PASSWORD", ""),
             "HOST": os.environ.get("DB_HOST", "localhost"),
             "PORT": os.environ.get("DB_PORT", "5432"),
+            # Reutiliza la conexión 60 s en vez de abrir una por petición,
+            # y verifica que siga viva antes de usarla (RDS puede cortarla).
+            "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "60")),
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                # En AWS RDS usar "require": la conexión viaja cifrada.
+                "sslmode": os.environ.get("DB_SSLMODE", "prefer"),
+            },
         }
     }
 else:

@@ -11,8 +11,34 @@ on:
 
 jobs:
   pruebas:
-    name: Pruebas y verificaciones de Django
+    name: Pruebas (${{ matrix.base_de_datos }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # SQLite: desarrollo y etapa E0. PostgreSQL: AWS RDS (doc 17).
+        base_de_datos: [sqlite, postgresql]
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: finmicro
+          POSTGRES_USER: finmicro
+          POSTGRES_PASSWORD: finmicro-ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U finmicro"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      DB_ENGINE: ${{ matrix.base_de_datos == 'postgresql' && 'postgresql' || '' }}
+      DB_NAME: finmicro
+      DB_USER: finmicro
+      DB_PASSWORD: finmicro-ci
+      DB_HOST: localhost
+      DB_PORT: "5432"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -30,7 +56,17 @@ jobs:
       - name: Pruebas automatizadas
         run: python manage.py test --verbosity 2
 
-      - name: Checklist de despliegue de Django
+  despliegue:
+    name: Checklist de despliegue de Django
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: check --deploy
         env:
           DJANGO_DEBUG: "False"
           DJANGO_SECRET_KEY: ci-${{ github.sha }}-clave-larga-solo-para-verificar-la-configuracion
@@ -40,7 +76,7 @@ jobs:
   docker:
     name: Construcción de la imagen Docker
     runs-on: ubuntu-latest
-    needs: pruebas
+    needs: [pruebas, despliegue]
     steps:
       - uses: actions/checkout@v4
       - name: Construir imagen
