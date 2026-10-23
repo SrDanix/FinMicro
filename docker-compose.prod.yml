@@ -1,0 +1,18 @@
+# Producción en la instancia EC2 (detrás de Nginx con HTTPS).
+# Uso:  docker compose -f docker-compose.prod.yml up -d --build
+# Las variables se leen del archivo .env del servidor (ver .env.example).
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"   # solo accesible desde Nginx, no desde internet
+    env_file: .env
+    environment:
+      DJANGO_DEBUG: "False"
+      SQLITE_PATH: "/app/data/db.sqlite3"
+    volumes:
+      - finmicro_datos:/app/data
+
+volumes:
+  finmicro_datos:

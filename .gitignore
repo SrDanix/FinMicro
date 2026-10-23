@@ -10,6 +10,7 @@ staticfiles/
 
 # Secretos (nunca subir el .env real)
 .env
+demo_cuenta.txt
 
 # Editor / sistema
 .vscode/

@@ -25,11 +25,14 @@ def _historial_ingresos_mensuales(usuario, meses=6):
     incluir explícitamente los meses sin ningún ingreso registrado como
     $0 — la regresión lineal necesita una serie continua, no solo los
     meses que tuvieron movimientos.
+
+    Solo se usan meses completos (termina en el mes anterior): el mes en
+    curso tiene datos parciales y arrastraría la tendencia hacia abajo.
     """
-    hoy = timezone.localdate().replace(day=1)
+    mes_actual = timezone.localdate().replace(day=1)
     etiquetas, valores = [], []
-    for i in range(meses - 1, -1, -1):
-        mes_ref = hoy - relativedelta(months=i)
+    for i in range(meses, 0, -1):
+        mes_ref = mes_actual - relativedelta(months=i)
         total = Movimiento.objects.filter(
             usuario=usuario,
             tipo=Categoria.Tipo.INGRESO,
@@ -43,17 +46,20 @@ def _historial_ingresos_mensuales(usuario, meses=6):
 
 @login_required
 def proyeccion_ingresos(request):
-    etiquetas, historial = _historial_ingresos_mensuales(request.user, meses=6)
+    etiquetas, historial = _historial_ingresos_mensuales(request.negocio, meses=6)
     meses_con_datos = sum(1 for v in historial if v > 0)
 
     proyeccion = None
     etiquetas_proyeccion = []
     if meses_con_datos >= 2:
-        proyeccion = proyectar_ingresos(historial, meses_futuros=3)
-        ultimo_mes = timezone.localdate().replace(day=1)
+        # Los meses en $0 antes del primer ingreso son meses en que el
+        # usuario aún no usaba FinMicro, no meses sin ventas.
+        inicio = next(i for i, v in enumerate(historial) if v > 0)
+        proyeccion = proyectar_ingresos(historial[inicio:], meses_futuros=3)
+        # La proyección empieza en el mes en curso (aún incompleto).
+        mes_actual = timezone.localdate().replace(day=1)
         etiquetas_proyeccion = [
-            _etiqueta_mes(ultimo_mes + relativedelta(months=i + 1))
-            for i in range(3)
+            _etiqueta_mes(mes_actual + relativedelta(months=i)) for i in range(3)
         ]
 
     grafico = {
@@ -75,7 +81,7 @@ def proyeccion_ingresos(request):
 
 @login_required
 def evaluador_viabilidad(request):
-    plan = request.user.suscripcion_activa.plan if request.user.suscripcion_activa else None
+    plan = request.negocio.suscripcion_activa.plan if request.negocio.suscripcion_activa else None
     if not plan or not plan.incluye_evaluador_viabilidad:
         messages.info(
             request,

@@ -13,7 +13,10 @@
       <button type="submit" class="btn btn-primario btn-bloque">Entrar</button>
     </form>
 
-    <p class="texto-centro" style="margin-top:18px; font-size:0.88rem;">
+    <p class="texto-centro" style="margin-top:14px; font-size:0.88rem;">
+      <a href="{% url 'accounts:password_reset' %}">¿Olvidaste tu contraseña?</a>
+    </p>
+    <p class="texto-centro" style="margin-top:8px; font-size:0.88rem;">
       ¿Aún no tienes cuenta? <a href="{% url 'accounts:registro' %}">Crea una gratis</a>
     </p>
   </div>

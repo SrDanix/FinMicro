@@ -7,7 +7,7 @@
 <div class="grid grid-3">
   {% for valor in proyeccion %}
   <div class="tarjeta tarjeta-metrica">
-    <div class="etiqueta">Mes +{{ forloop.counter }}</div>
+    <div class="etiqueta">{% if forloop.first %}Este mes{% else %}Mes +{{ forloop.counter0 }}{% endif %}</div>
     <div class="valor ingreso cifra">${{ valor|floatformat:"0g" }}</div>
   </div>
   {% endfor %}
@@ -16,12 +16,12 @@
 <div class="tarjeta" style="margin-top:20px;">
   <div class="tarjeta-titulo"><h3>Historial y proyección</h3></div>
   <canvas id="graficoProyeccion" height="110"></canvas>
-  <p class="texto-ayuda">Proyección por tendencia lineal de tus ingresos de los últimos 6 meses. Es una estimación, no una garantía.</p>
+  <p class="texto-ayuda">Proyección por tendencia lineal de tus ingresos de los últimos 6 meses completos. Es una estimación, no una garantía.</p>
 </div>
 {% else %}
 <div class="tarjeta estado-vacio">
   <h3>Faltan datos para proyectar</h3>
-  <p class="texto-tenue">Necesitas ingresos registrados en al menos 2 de los últimos 6 meses.</p>
+  <p class="texto-tenue">Necesitas ingresos registrados en al menos 2 de los últimos 6 meses completos (el mes en curso no cuenta).</p>
   <a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">Registrar un ingreso</a>
 </div>
 {% endif %}

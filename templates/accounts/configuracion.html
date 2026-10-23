@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block titulo_pagina %}Configuración del negocio{% endblock %}
+
+{% block contenido %}
+<div class="grid grid-2">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Tributación y metas</h3></div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% include "partials/_campos_formulario.html" %}
+      <button type="submit" class="btn btn-primario">Guardar configuración</button>
+    </form>
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>¿Qué régimen elijo?</h3></div>
+    <ul class="texto-tenue" style="font-size:0.88rem; padding-left:18px;">
+      <li><strong>Sin inicio de actividades:</strong> vendes de manera informal; no emites boletas ni facturas.</li>
+      <li><strong>Pro Pyme General:</strong> el régimen por defecto de las pymes con inicio de actividades.</li>
+      <li><strong>Pro Pyme Transparente:</strong> los dueños tributan directamente por las utilidades.</li>
+      <li><strong>Renta presunta:</strong> solo algunas actividades (agrícola, transporte, minería).</li>
+      <li><strong>General semi integrado:</strong> empresas más grandes o que no califican como pyme.</li>
+    </ul>
+    <p class="texto-ayuda">Si tienes dudas, revisa tu régimen en sii.cl (Mi SII → Datos personales y tributarios) o consulta a un contador.</p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Invitación{% endblock %}
+{% block titulo_pagina %}Invitación a colaborar{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:480px;">
+  <h2 style="margin-bottom:6px;">{{ invitacion.propietario.nombre_negocio }}</h2>
+  <p class="texto-tenue">Te invitaron con el rol: <strong>{{ invitacion.get_rol_display }}</strong>.</p>
+
+  {% if not correo_coincide %}
+    <div class="aviso aviso-alerta">
+      Esta invitación es para <strong>{{ invitacion.email }}</strong>, pero tu cuenta usa
+      <strong>{{ user.email }}</strong>. Inicia sesión con la cuenta correcta.
+    </div>
+  {% elif invitacion.estado == "aceptada" and invitacion.colaborador_id != user.pk %}
+    <div class="aviso aviso-alerta">Esta invitación ya fue usada.</div>
+  {% else %}
+    <form method="post">
+      {% csrf_token %}
+      <div class="flex-entre">
+        <a href="{% url 'finances:dashboard' %}" class="btn btn-fantasma">Ahora no</a>
+        <button type="submit" class="btn btn-primario">Aceptar invitación</button>
+      </div>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}

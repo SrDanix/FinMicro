@@ -1,0 +1,15 @@
+# Git normaliza los finales de línea: en el repositorio siempre LF.
+* text=auto
+
+# Archivos que se ejecutan en Linux (servidor, Docker, CI): siempre LF,
+# también en Windows. Con CRLF, bash falla con "\r: command not found".
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+*.yml       text eol=lf
+*.conf      text eol=lf
+
+# Binarios: no tocar.
+*.png binary
+*.jpg binary
+*.xlsx binary
+*.sqlite3 binary

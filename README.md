@@ -24,6 +24,23 @@ python manage.py runserver
 
 Abre http://127.0.0.1:8000, crea una cuenta y empieza a registrar movimientos.
 
+## Con Docker
+
+Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+```bash
+docker compose up --build
+```
+
+Abre http://localhost:8000. Los datos quedan en el volumen `finmicro_datos`.
+Para detenerlo: `Ctrl+C` o `docker compose down`.
+
+## Documentación del proyecto
+
+Toda la documentación de análisis, diseño y seguimiento está en [`docs/`](docs/).
+Comienza por el [estado frente a la carta Gantt](docs/00_estado_carta_gantt.md).
+Para contribuir, lee [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Tests
 
 ```bash

@@ -1,9 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-# Register your models here.
-
-from .models import Usuario
+from .models import Colaboracion, Usuario
 
 
 @admin.register(Usuario)
@@ -20,7 +18,7 @@ class UsuarioAdmin(UserAdmin):
         "is_active",
         "fecha_registro",
     )
-    list_filter = ("tipo_negocio", "emite_boletas_honorarios", "is_active")
+    list_filter = ("tipo_negocio", "regimen_tributario", "emite_boletas_honorarios", "is_active")
     search_fields = ("username", "nombre_negocio", "rut", "email")
     fieldsets = UserAdmin.fieldsets + (
         (
@@ -32,7 +30,10 @@ class UsuarioAdmin(UserAdmin):
                     "tipo_negocio",
                     "telefono",
                     "comuna",
+                    "regimen_tributario",
+                    "afecto_iva",
                     "emite_boletas_honorarios",
+                    "meta_ventas_mensual",
                 )
             },
         ),
@@ -50,3 +51,10 @@ class UsuarioAdmin(UserAdmin):
             },
         ),
     )
+
+
+@admin.register(Colaboracion)
+class ColaboracionAdmin(admin.ModelAdmin):
+    list_display = ("email", "propietario", "colaborador", "rol", "estado", "creada_en")
+    list_filter = ("rol", "estado")
+    search_fields = ("email", "propietario__nombre_negocio")

@@ -1,0 +1,13 @@
+# Lo que NO se copia a la imagen (más liviana y sin secretos).
+venv/
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+staticfiles/
+.env
+demo_cuenta.txt
+.git/
+.vscode/
+.idea/
+.claude/

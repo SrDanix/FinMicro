@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Eliminar cuenta{% endblock %}
+{% block titulo_pagina %}Eliminar mi cuenta{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:500px;">
+  <div class="aviso aviso-error">
+    Se borrarán de forma permanente tu perfil, tus movimientos, tus categorías, tus suscripciones
+    y los accesos de tus colaboradores. Esta acción no se puede deshacer.
+  </div>
+  <p class="texto-tenue">
+    Antes de continuar, puedes <a href="{% url 'accounts:exportar_datos' %}">descargar una copia de tus datos</a>.
+  </p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% include "partials/_campos_formulario.html" %}
+    <div class="flex-entre">
+      <a href="{% url 'accounts:perfil' %}" class="btn btn-fantasma">Cancelar</a>
+      <button type="submit" class="btn btn-peligro">Eliminar definitivamente</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

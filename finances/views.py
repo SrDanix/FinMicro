@@ -15,6 +15,7 @@ from django.db.models.functions import TruncMonth
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from accounts.negocio import requiere_edicion
 from .forms import CategoriaForm, FiltroMovimientosForm, MovimientoForm
 from .models import Categoria, Movimiento
 
@@ -33,14 +34,14 @@ def _resumen_mes(usuario, anio, mes):
 @login_required
 def dashboard(request):
     hoy = timezone.localdate()
-    resumen_actual = _resumen_mes(request.user, hoy.year, hoy.month)
+    resumen_actual = _resumen_mes(request.negocio, hoy.year, hoy.month)
 
     # Serie de los últimos 6 meses para el gráfico (Chart.js, ver
     # dashboard.html). Se arma con TruncMonth + Sum en una sola consulta
     # por tipo, en vez de 6 consultas sueltas por mes.
     hace_6_meses = (hoy.replace(day=1) - timedelta(days=150)).replace(day=1)
     serie = (
-        Movimiento.objects.filter(usuario=request.user, fecha__gte=hace_6_meses)
+        Movimiento.objects.filter(usuario=request.negocio, fecha__gte=hace_6_meses)
         .annotate(mes=TruncMonth("fecha"))
         .values("mes", "tipo")
         .annotate(total=Sum("monto"))
@@ -59,16 +60,19 @@ def dashboard(request):
             float(next((r["total"] for r in serie if r["mes"] == mes and r["tipo"] == "gasto"), 0))
         )
 
-    ultimos_movimientos = Movimiento.objects.filter(usuario=request.user).select_related(
+    ultimos_movimientos = Movimiento.objects.filter(usuario=request.negocio).select_related(
         "categoria"
     )[:8]
 
-    plan = request.user.suscripcion_activa.plan if request.user.suscripcion_activa else None
+    plan = request.negocio.suscripcion_activa.plan if request.negocio.suscripcion_activa else None
     movimientos_del_mes = Movimiento.objects.filter(
-        usuario=request.user, fecha__year=hoy.year, fecha__month=hoy.month
+        usuario=request.negocio, fecha__year=hoy.year, fecha__month=hoy.month
     ).count()
 
+    meta = request.negocio.meta_ventas_mensual
     contexto = {
+        "meta_ventas": meta,
+        "avance_meta": min(100, round(resumen_actual["ingresos"] * 100 / meta)) if meta else None,
         "resumen": resumen_actual,
         "ultimos_movimientos": ultimos_movimientos,
         "grafico_datos": json.dumps(
@@ -87,7 +91,7 @@ def dashboard(request):
 @login_required
 def listar_movimientos(request):
     form = FiltroMovimientosForm(request.GET or None)
-    movimientos = Movimiento.objects.filter(usuario=request.user).select_related("categoria")
+    movimientos = Movimiento.objects.filter(usuario=request.negocio).select_related("categoria")
 
     if form.is_valid():
         if form.cleaned_data.get("mes"):
@@ -116,8 +120,9 @@ def _limite_alcanzado(usuario) -> bool:
 
 
 @login_required
+@requiere_edicion
 def crear_movimiento(request):
-    if _limite_alcanzado(request.user):
+    if _limite_alcanzado(request.negocio):
         messages.warning(
             request,
             "Alcanzaste el límite de movimientos del Plan Básico este mes. "
@@ -126,37 +131,39 @@ def crear_movimiento(request):
         return redirect("subscriptions:planes")
 
     if request.method == "POST":
-        form = MovimientoForm(request.POST, usuario=request.user)
+        form = MovimientoForm(request.POST, usuario=request.negocio)
         if form.is_valid():
             movimiento = form.save(commit=False)
-            movimiento.usuario = request.user
+            movimiento.usuario = request.negocio
             movimiento.save()
             messages.success(request, "Movimiento registrado.")
             return redirect("finances:dashboard")
     else:
-        form = MovimientoForm(usuario=request.user, initial={"fecha": timezone.localdate()})
+        form = MovimientoForm(usuario=request.negocio, initial={"fecha": timezone.localdate()})
 
     return render(request, "finances/movimiento_form.html", {"form": form, "modo": "crear"})
 
 
 @login_required
+@requiere_edicion
 def editar_movimiento(request, pk):
-    movimiento = get_object_or_404(Movimiento, pk=pk, usuario=request.user)
+    movimiento = get_object_or_404(Movimiento, pk=pk, usuario=request.negocio)
     if request.method == "POST":
-        form = MovimientoForm(request.POST, instance=movimiento, usuario=request.user)
+        form = MovimientoForm(request.POST, instance=movimiento, usuario=request.negocio)
         if form.is_valid():
             form.save()
             messages.success(request, "Movimiento actualizado.")
             return redirect("finances:listar_movimientos")
     else:
-        form = MovimientoForm(instance=movimiento, usuario=request.user)
+        form = MovimientoForm(instance=movimiento, usuario=request.negocio)
 
     return render(request, "finances/movimiento_form.html", {"form": form, "modo": "editar"})
 
 
 @login_required
+@requiere_edicion
 def eliminar_movimiento(request, pk):
-    movimiento = get_object_or_404(Movimiento, pk=pk, usuario=request.user)
+    movimiento = get_object_or_404(Movimiento, pk=pk, usuario=request.negocio)
     if request.method == "POST":
         movimiento.delete()
         messages.success(request, "Movimiento eliminado.")
@@ -165,12 +172,13 @@ def eliminar_movimiento(request, pk):
 
 
 @login_required
+@requiere_edicion
 def crear_categoria(request):
     if request.method == "POST":
         form = CategoriaForm(request.POST)
         if form.is_valid():
             categoria = form.save(commit=False)
-            categoria.usuario = request.user
+            categoria.usuario = request.negocio
             categoria.save()
             messages.success(request, f'Categoría "{categoria.nombre}" creada.')
             return redirect("finances:crear_movimiento")
