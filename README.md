@@ -32,7 +32,9 @@ Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 docker compose up --build
 ```
 
-Abre http://localhost:8000. Los datos quedan en el volumen `finmicro_datos`.
+Abre http://localhost:8000. Levanta la app y un PostgreSQL 17 (igual que producción);
+los datos quedan en el volumen `finmicro_postgres`. Para AWS RDS, ver
+[docs/17_base_de_datos_aws.md](docs/17_base_de_datos_aws.md).
 Para detenerlo: `Ctrl+C` o `docker compose down`.
 
 ## Documentación del proyecto
