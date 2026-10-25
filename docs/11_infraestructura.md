@@ -2,6 +2,8 @@
 
 **Actividades 6.0, 6.1 y 6.4** · Responsables: Danilo (6.0, 6.1), Marcelo (6.4)
 
+> Para desplegar en el **Learner Lab de AWS Academy**, ver [17_despliegue_aws_academy.md](17_despliegue_aws_academy.md).
+
 ## 6.0 Verificación de la cuenta AWS y presupuesto de alertas
 
 > ⚠️ **Requiere una persona con acceso a la cuenta de AWS.** Esto no se puede hacer
