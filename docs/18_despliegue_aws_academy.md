@@ -198,6 +198,8 @@ cd ~/FinMicro
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
 ```
+(Qué pide y cómo crear usuarios de prueba: sección **Usuarios y datos**.)
+
 Al arrancar, el contenedor aplica las migraciones y levanta Gunicorn. Los datos quedan en
 el volumen `finmicro_datos` y `restart: unless-stopped` lo vuelve a levantar solo.
 
@@ -247,6 +249,88 @@ docker compose -f docker-compose.prod.yml up -d --force-recreate
 ```
 Abrir **https://finmicro.duckdns.org** 🔒. Ojo: activa HSTS por 7 días; no volver a
 `http` con ese dominio.
+
+---
+
+# Usuarios y datos
+
+## Superusuario (administrador)
+```bash
+cd ~/FinMicro
+docker compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+```
+Pide, en orden: **usuario**, **correo**, **RUT** (con guion y dígito verificador válido,
+p. ej. `11111111-1`; si no es válido lo vuelve a pedir), **nombre del negocio** y la
+**contraseña** dos veces (no se ve mientras se escribe; es normal).
+
+El superusuario entra a la app y al panel de administración en `http://TU_IP/admin/`.
+No recibe plan al crearse: para probar Premium con él, en `/admin/` →
+**Suscripciones → Agregar**: usuario = el superusuario, plan = Plan Premium,
+estado = Activa → **Guardar**.
+
+## Usuarios de prueba
+```bash
+docker compose -f docker-compose.prod.yml exec web python manage.py crear_usuarios_prueba
+```
+Crea tres cuentas y muestra la contraseña generada al final (para elegirla:
+`--password "TuClave.2026"`):
+
+| Usuario | Plan | Datos |
+|---|---|---|
+| `prueba_basico` | Básico | 4 meses de ingresos y gastos de ejemplo |
+| `prueba_premium` | Premium (evaluador de viabilidad) | 4 meses de ingresos y gastos de ejemplo |
+| `prueba_nuevo` | Básico | Vacía, para probar desde cero |
+
+Se puede ejecutar de nuevo sin peligro: si una cuenta ya existe, no la toca. Para más
+cuentas, usar **Crear cuenta** en la app o `/admin/` → **Usuarios → Agregar**.
+
+## Dónde se guardan, por dónde viajan y dónde se ven los datos
+
+**Dónde se guardan.** En una base SQLite: el archivo `/app/data/db.sqlite3` dentro del
+contenedor, que vive en el volumen de Docker `finmicro_finmicro_datos`, en el disco
+(EBS) de la instancia EC2:
+```bash
+docker volume inspect finmicro_finmicro_datos --format '{{ .Mountpoint }}'
+# → /var/lib/docker/volumes/finmicro_finmicro_datos/_data   (ahí está db.sqlite3)
+```
+Las contraseñas no se guardan tal cual, sino como hash (PBKDF2): ni el administrador
+puede leerlas.
+
+**Por dónde viajan.**
+```
+Navegador ──(http / https)──► Nginx ──► Gunicorn + Django (contenedor) ──► db.sqlite3
+```
+Los datos de los usuarios no salen del servidor:
+
+| Conexión externa | Qué viaja |
+|---|---|
+| mindicador.cl | La app **pide** la UF, el dólar, etc. No envía datos de usuarios |
+| Khipu / Flow.cl | Nada mientras `PAGOS_MODO_SIMULADO=True` |
+| Correo | Nada: con el backend de consola los correos solo se escriben en los logs |
+
+**Dónde se ven.**
+
+| Dónde | Qué muestra |
+|---|---|
+| La app (`http://TU_IP`) | Lo de cada usuario: panel, movimientos, impuestos, proyección |
+| `http://TU_IP/admin/` (superusuario) | Todo: Usuarios, Movimientos, Categorías, Suscripciones, Colaboraciones. Se puede buscar, editar y borrar |
+| **Mi perfil → Descargar mis datos (JSON)** | Los datos de un usuario en un archivo JSON |
+| `docker compose -f docker-compose.prod.yml logs web` | Visitas, errores y correos (recuperar contraseña, invitaciones) |
+| Directo en la base (terminal) | Ver abajo |
+
+Consultas directas a la base (solo lectura, para revisar):
+```bash
+sudo apt-get install -y sqlite3
+sudo sqlite3 -readonly -header -column \
+  /var/lib/docker/volumes/finmicro_finmicro_datos/_data/db.sqlite3
+```
+```sql
+.tables
+SELECT id, username, email, rut, nombre_negocio FROM accounts_usuario;
+SELECT usuario_id, tipo, monto, fecha, descripcion FROM finances_movimiento ORDER BY fecha DESC LIMIT 20;
+SELECT usuario_id, plan_id, estado FROM subscriptions_suscripcion;
+.quit
+```
 
 ---
 
