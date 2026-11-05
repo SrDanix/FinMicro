@@ -39,7 +39,18 @@ Para detenerlo: `Ctrl+C` o `docker compose down`.
 
 Toda la documentación de análisis, diseño y seguimiento está en [`docs/`](docs/).
 Comienza por el [estado frente a la carta Gantt](docs/00_estado_carta_gantt.md).
+Para publicarlo en AWS Academy (EC2 + Docker + Nginx), sigue la
+[guía de despliegue paso a paso](docs/18_despliegue_aws_academy.md).
 Para contribuir, lee [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Usuarios de prueba
+
+```bash
+python manage.py crear_usuarios_prueba            # o, en Docker: docker compose exec web python manage.py crear_usuarios_prueba
+```
+
+Crea `prueba_basico` (Plan Básico con 4 meses de datos), `prueba_premium` (Premium con
+datos) y `prueba_nuevo` (vacía) y muestra la contraseña al final. Si ya existen, no las toca.
 
 ## Tests
 

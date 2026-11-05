@@ -1,7 +1,9 @@
 """Pruebas del Sprint 1: cuenta, configuración, colaboradores y datos personales."""
 import json
+from io import StringIO
 
 from django.core import mail
+from django.core.management import call_command
 from django.core.exceptions import ValidationError
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
@@ -213,3 +215,28 @@ class RecuperarClaveTests(TestCase):
     def test_pantallas_publicas_cargan(self):
         self.assertContains(self.client.get(reverse("accounts:login")), "¿Olvidaste tu contraseña?")
         self.assertEqual(self.client.get(reverse("accounts:password_reset")).status_code, 200)
+
+
+class CrearUsuariosPruebaTests(TestCase):
+    def test_crea_cuentas_con_planes_y_datos(self):
+        call_command("crear_usuarios_prueba", password=CLAVE, stdout=StringIO())
+        basico = Usuario.objects.get(username="prueba_basico")
+        premium = Usuario.objects.get(username="prueba_premium")
+        nuevo = Usuario.objects.get(username="prueba_nuevo")
+        self.assertFalse(basico.es_premium)
+        self.assertTrue(premium.es_premium)
+        self.assertEqual(nuevo.suscripcion_activa.plan.codigo, "basico")
+        self.assertTrue(basico.movimientos.exists())
+        self.assertFalse(nuevo.movimientos.exists())
+        for usuario in (basico, premium, nuevo):
+            validar_rut(usuario.rut)
+        self.assertTrue(self.client.login(username="prueba_premium", password=CLAVE))
+        self.assertEqual(self.client.get(reverse("finances:dashboard")).status_code, 200)
+
+    def test_no_duplica_si_se_ejecuta_dos_veces(self):
+        call_command("crear_usuarios_prueba", password=CLAVE, stdout=StringIO())
+        movimientos = Movimiento.objects.count()
+        call_command("crear_usuarios_prueba", stdout=StringIO())
+        self.assertEqual(Usuario.objects.filter(username__startswith="prueba_").count(), 3)
+        self.assertEqual(Movimiento.objects.count(), movimientos)
+        self.assertTrue(self.client.login(username="prueba_basico", password=CLAVE))
