@@ -64,6 +64,11 @@ misma región.
 2. Seleccionarla → **Actions → Associate Elastic IP address** → Instance `finmicro-prod` → **Associate**.
 3. Anotar la IP. En esta guía es `TU_IP`.
 
+> ⚠️ `TU_IP` es la **IP pública** de la instancia (la Elastic IP). No sirven la IP de tu
+> PC en tu casa (`192.168.x.x`) ni la IP privada de la instancia (`172.31.x.x`, la que
+> aparece en `ubuntu@ip-172-31-...`): desde internet nadie llega a ellas. Desde la
+> terminal del servidor se puede confirmar con `curl -s https://checkip.amazonaws.com`.
+
 **Por qué:** sin ella la IP cambia cada vez que el lab enciende la instancia.
 
 ## Paso 4 — Security Group (consola)
@@ -353,4 +358,17 @@ SELECT usuario_id, plan_id, estado FROM subscriptions_suscripcion;
 | **502 Bad Gateway** | La app no está corriendo | `ps` y `logs` del paso 11 |
 | Redirige a `https://` y falla | `DJANGO_HTTPS=True` sin certificado | Volver a `False` o hacer la etapa 2 |
 | EC2 Instance Connect no conecta | Falta la regla SSH de `us-east-1` | Paso 4 |
+| `curl -I http://TU_IP` → *Couldn't connect to server*, pero la prueba **b** del paso 11 da 200 | Se usó una IP privada (`192.168.x.x` o `172.31.x.x`) en vez de la Elastic IP | Ver abajo |
 | *"rule ... already exists"* | Regla duplicada en el Security Group | Paso 4 |
+
+### Corregir una IP equivocada en `.env` y Nginx
+```bash
+IP=$(curl -s https://checkip.amazonaws.com); echo $IP    # debe ser la Elastic IP
+cd ~/FinMicro
+sed -i "s/IP_EQUIVOCADA/$IP/g" .env                      # p. ej. 192\.168\.1\.11
+sudo sed -i "s/IP_EQUIVOCADA/$IP/g" /etc/nginx/sites-available/finmicro
+grep -E "ALLOWED_HOSTS|CSRF_TRUSTED" .env
+grep server_name /etc/nginx/sites-available/finmicro
+sudo nginx -t && sudo systemctl reload nginx
+docker compose -f docker-compose.prod.yml up -d --force-recreate
+```
