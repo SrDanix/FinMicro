@@ -211,9 +211,11 @@ def exportar_datos(request):
             "meta_ventas_mensual": u.meta_ventas_mensual,
             "fecha_registro": u.fecha_registro,
         },
-        "categorias_propias": list(u.categorias.values("nombre", "tipo", "es_gravable_iva")),
+        "categorias_propias": list(u.categorias.values("nombre", "tipo", "naturaleza", "es_gravable_iva")),
         "movimientos": list(
-            u.movimientos.values("fecha", "tipo", "categoria__nombre", "monto", "descripcion")
+            u.movimientos.values(
+                "fecha", "tipo", "categoria__nombre", "producto__nombre", "cantidad", "monto", "descripcion"
+            )
         ),
         "suscripciones": list(
             u.suscripciones.values("plan__nombre", "estado", "metodo_pago", "fecha_inicio", "fecha_fin")
@@ -221,6 +223,11 @@ def exportar_datos(request):
         "colaboradores_invitados": list(
             u.colaboraciones_otorgadas.values("email", "rol", "estado")
         ),
+        "productos": list(u.productos.values("nombre", "precio", "afecto_iva", "activo")),
+        "consentimientos": list(
+            u.consentimientos.values("documento__tipo", "documento__version", "documento__huella", "aceptado_en")
+        ),
+        "consultas_asistente": list(u.consultas_asistente.values("pregunta", "respuesta", "creada_en")),
     }
     registrar(Accion.EXPORTAR_DATOS, request=request)
     respuesta = HttpResponse(

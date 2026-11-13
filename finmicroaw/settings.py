@@ -244,3 +244,8 @@ KHIPU_API_KEY = os.environ.get("KHIPU_API_KEY", "")
 FLOW_API_KEY = os.environ.get("FLOW_API_KEY", "")
 FLOW_SECRET_KEY = os.environ.get("FLOW_SECRET_KEY", "")
 FLOW_API_URL = os.environ.get("FLOW_API_URL", "https://sandbox.flow.cl/api")
+
+# --- Asistente financiero (RF-37, core/asistente.py) ---
+# Sin clave el asistente queda apagado y la pantalla lo informa.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ASISTENTE_PREGUNTAS_POR_DIA = int(os.environ.get("ASISTENTE_PREGUNTAS_POR_DIA", "20"))

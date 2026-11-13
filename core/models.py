@@ -74,3 +74,20 @@ class RegistroAuditoria(models.Model):
 
     def __str__(self):
         return f"{self.creado_en:%d-%m-%Y %H:%M} {self.nombre_usuario} {self.get_accion_display()}"
+
+
+class ConsultaAsistente(models.Model):
+    """RF-37: preguntas al asistente y sus respuestas, para el historial y el tope diario."""
+
+    negocio = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="consultas_asistente")
+    pregunta = models.CharField(max_length=500)
+    respuesta = models.TextField()
+    creada_en = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Consulta al asistente"
+        verbose_name_plural = "Consultas al asistente"
+        ordering = ["-creada_en"]
+
+    def __str__(self):
+        return self.pregunta[:60]

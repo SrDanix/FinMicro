@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -6,7 +7,8 @@ from django.views.decorators.http import require_POST
 # Create your views here.
 import logging
 
-from .models import Alerta
+from . import asistente
+from .models import Alerta, ConsultaAsistente
 from .services import BancoCentralService
 
 logger = logging.getLogger(__name__)
@@ -49,3 +51,38 @@ def marcar_alerta_leida(request, pk):
     if not url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
         siguiente = "core:alertas"
     return redirect(siguiente)
+
+
+
+@login_required
+def asistente_financiero(request):
+    """RF-37 (Premium): preguntas en lenguaje natural sobre el negocio activo."""
+    negocio = request.negocio
+    if not negocio.es_premium:
+        messages.info(request, "El asistente financiero es una funcionalidad del Plan Premium.")
+        return redirect("subscriptions:planes")
+
+    respuesta = None
+    pregunta = ""
+    if request.method == "POST":
+        pregunta = request.POST.get("pregunta", "").strip()
+        if not pregunta:
+            messages.error(request, "Escribe una pregunta.")
+        elif not asistente.preguntas_restantes(negocio):
+            messages.error(request, "Llegaste al máximo de preguntas de hoy. Vuelve mañana.")
+        else:
+            try:
+                respuesta = asistente.responder(negocio, pregunta)
+            except asistente.AsistenteNoDisponible as error:
+                messages.error(request, str(error))
+            else:
+                ConsultaAsistente.objects.create(negocio=negocio, pregunta=pregunta[:500], respuesta=respuesta)
+                pregunta = ""
+
+    return render(request, "core/asistente.html", {
+        "configurado": asistente.esta_configurado(),
+        "respuesta": respuesta,
+        "pregunta": pregunta,
+        "restantes": asistente.preguntas_restantes(negocio),
+        "historial": ConsultaAsistente.objects.filter(negocio=negocio)[:10],
+    })

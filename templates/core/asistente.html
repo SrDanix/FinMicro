@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Asistente financiero{% endblock %}
+{% block titulo_pagina %}Asistente financiero{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta mt-0" style="max-width:760px;">
+  {% if not configurado %}
+    <div class="estado-vacio">
+      <h3>El asistente aún no está activo</h3>
+      <p class="texto-tenue">El equipo de FinMicro lo habilitará pronto. Mientras tanto, revisa tus <a href="{% url 'finances:indicadores' %}">indicadores</a>.</p>
+    </div>
+  {% else %}
+    <p class="texto-tenue mt-0">Pregunta sobre las ventas, gastos, caja o impuestos de <strong>{{ negocio.nombre_negocio }}</strong>. El asistente solo ve los datos de este negocio y sus respuestas son estimaciones de apoyo, no asesoría.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="grupo-campo">
+        <label for="pregunta">Tu pregunta</label>
+        <textarea id="pregunta" name="pregunta" class="campo-input campo-textarea" rows="3" maxlength="500" placeholder="¿En qué gasté más este mes? ¿Cuánto me falta para cubrir mis costos fijos?">{{ pregunta }}</textarea>
+        <p class="texto-ayuda">Te quedan {{ restantes }} pregunta{{ restantes|pluralize }} hoy.</p>
+      </div>
+      <button type="submit" class="btn btn-primario" {% if not restantes %}disabled{% endif %}>Preguntar</button>
+    </form>
+
+    {% if respuesta %}
+    <div class="aviso aviso-info" style="margin-top:16px; white-space:pre-line;" role="status">{{ respuesta }}</div>
+    {% endif %}
+  {% endif %}
+</div>
+
+{% if historial %}
+<div class="tarjeta" style="margin-top:20px; max-width:760px;">
+  <div class="tarjeta-titulo"><h3>Preguntas anteriores</h3></div>
+  {% for c in historial %}
+    <div style="margin-bottom:14px;">
+      <p class="texto-tenue mt-0" style="margin-bottom:4px;">{{ c.creada_en|date:"d/m/Y H:i" }} · <strong>{{ c.pregunta }}</strong></p>
+      <div style="white-space:pre-line;">{{ c.respuesta }}</div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

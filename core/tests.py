@@ -234,3 +234,86 @@ class AuditoriaTests(TestCase):
         self.assertFalse(admin_auditoria.has_add_permission(request))
         self.assertFalse(admin_auditoria.has_change_permission(request))
         self.assertFalse(admin_auditoria.has_delete_permission(request))
+
+
+# ---------- RF-37: asistente ----------
+from types import SimpleNamespace
+
+import anthropic
+from django.test import override_settings
+
+from subscriptions.models import Suscripcion
+from subscriptions.services import asegurar_plan_premium
+
+from .models import ConsultaAsistente
+
+
+def _respuesta(texto="Este mes vendiste $300.000.", stop_reason="end_turn"):
+    return SimpleNamespace(stop_reason=stop_reason, content=[SimpleNamespace(type="text", text=texto)])
+
+
+class AsistenteTests(TestCase):
+    def setUp(self):
+        self.usuario = Usuario.objects.create_user(
+            username="premium", email="p@example.com", password="UnaClaveSegura.2026",
+            rut="11111111-1", nombre_negocio="Panadería Sol",
+        )
+        Suscripcion.objects.create(usuario=self.usuario, plan=asegurar_plan_premium(), estado="activa")
+        registrar_aceptacion(self.usuario)
+        ventas = Categoria.objects.get(nombre="Ventas", usuario=None)
+        Movimiento.objects.create(usuario=self.usuario, categoria=ventas, tipo="ingreso", monto=300_000,
+                                  fecha=timezone.localdate())
+        otro = Usuario.objects.create_user(username="otro", email="o@example.com", password="x",
+                                           rut="22222222-2", nombre_negocio="Negocio Ajeno Secreto")
+        Movimiento.objects.create(usuario=otro, categoria=ventas, tipo="ingreso", monto=7_777_777,
+                                  fecha=timezone.localdate())
+        self.client.login(username="premium", password="UnaClaveSegura.2026")
+
+    def _preguntar(self, cliente, texto="¿Cuánto vendí?"):
+        with mock.patch("core.asistente.anthropic.Anthropic", return_value=cliente):
+            return self.client.post(reverse("core:asistente"), {"pregunta": texto})
+
+    def test_sin_clave_queda_apagado(self):
+        self.assertContains(self.client.get(reverse("core:asistente")), "aún no está activo")
+
+    def test_solo_premium(self):
+        Suscripcion.objects.filter(usuario=self.usuario).update(estado="cancelada")
+        self.assertRedirects(self.client.get(reverse("core:asistente")), reverse("subscriptions:planes"))
+
+    @override_settings(ANTHROPIC_API_KEY="clave-de-prueba")
+    def test_responde_con_datos_solo_del_negocio_activo(self):
+        cliente = mock.MagicMock()
+        cliente.beta.messages.create.return_value = _respuesta()
+        respuesta = self._preguntar(cliente)
+        self.assertContains(respuesta, "Este mes vendiste $300.000.")
+        argumentos = cliente.beta.messages.create.call_args.kwargs
+        self.assertEqual(argumentos["model"], "claude-opus-5-5")
+        self.assertEqual(argumentos["fallbacks"], "default")
+        enviado = argumentos["messages"][0]["content"]
+        self.assertIn("Panadería Sol", enviado)
+        self.assertIn("$300.000", enviado)
+        self.assertNotIn("Ajeno", enviado)
+        self.assertNotIn("7.777.777", enviado)
+        self.assertEqual(ConsultaAsistente.objects.get().pregunta, "¿Cuánto vendí?")
+
+    @override_settings(ANTHROPIC_API_KEY="clave-de-prueba", ASISTENTE_PREGUNTAS_POR_DIA=1)
+    def test_tope_diario(self):
+        cliente = mock.MagicMock()
+        cliente.beta.messages.create.return_value = _respuesta()
+        self._preguntar(cliente)
+        respuesta = self._preguntar(cliente)
+        self.assertContains(respuesta, "máximo de preguntas de hoy")
+        self.assertEqual(cliente.beta.messages.create.call_count, 1)
+
+    @override_settings(ANTHROPIC_API_KEY="clave-de-prueba")
+    def test_rechazo_del_modelo(self):
+        cliente = mock.MagicMock()
+        cliente.beta.messages.create.return_value = _respuesta("", stop_reason="refusal")
+        self.assertContains(self._preguntar(cliente), "No puedo ayudarte con esa pregunta")
+
+    @override_settings(ANTHROPIC_API_KEY="clave-de-prueba")
+    def test_falla_de_la_api_no_guarda_nada(self):
+        cliente = mock.MagicMock()
+        cliente.beta.messages.create.side_effect = anthropic.APIConnectionError(request=mock.MagicMock())
+        self.assertContains(self._preguntar(cliente), "no pudo responder ahora")
+        self.assertFalse(ConsultaAsistente.objects.exists())
