@@ -12,6 +12,11 @@
         {% if suscripcion_activa.plan.codigo == "premium" %}<span class="insignia insignia-premium">Premium</span>{% else %}<span class="insignia insignia-basico">Básico</span>{% endif %}
       </p>
       <p class="texto-tenue">Activa desde el {{ suscripcion_activa.fecha_inicio|date:"d/m/Y" }}</p>
+      {% if suscripcion_activa.fecha_fin %}
+        <p>Pagado hasta el <strong>{{ suscripcion_activa.fecha_fin|date:"d/m/Y" }}</strong>.</p>
+        <p class="texto-ayuda">Si no renuevas, al vencer tienes 3 días de gracia y luego vuelves al Plan Básico sin perder tus datos.</p>
+        <a href="{% url 'subscriptions:suscribirse' suscripcion_activa.plan.codigo %}" class="btn btn-primario" style="margin-top:14px;">Renovar un mes</a>
+      {% endif %}
       <a href="{% url 'subscriptions:planes' %}" class="btn btn-secundario" style="margin-top:14px;">Cambiar de plan</a>
     {% else %}
       <p class="texto-tenue">No tienes una suscripción activa.</p>
@@ -24,7 +29,7 @@
     {% if historial %}
       <div class="tabla-envoltorio">
         <table class="tabla">
-          <thead><tr><th>Plan</th><th>Estado</th><th>Método</th><th>Fecha</th></tr></thead>
+          <thead><tr><th>Plan</th><th>Estado</th><th>Método</th><th>Fecha</th><th>Hasta</th></tr></thead>
           <tbody>
             {% for s in historial %}
             <tr>
@@ -36,6 +41,7 @@
               </td>
               <td>{{ s.get_metodo_pago_display }}</td>
               <td>{{ s.creada_en|date:"d/m/Y" }}</td>
+              <td>{{ s.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
             </tr>
             {% endfor %}
           </tbody>

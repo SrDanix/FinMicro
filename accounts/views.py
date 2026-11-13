@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
+from core.auditoria import Accion, registrar
 from subscriptions.services import asegurar_plan_basico
 from .forms import ConfiguracionForm, EliminarCuentaForm, InvitacionForm, PerfilForm, RegistroForm
 from .models import Colaboracion
@@ -98,6 +99,7 @@ def colaboradores(request):
                 [invitacion.email],
                 fail_silently=True,
             )
+            registrar(Accion.COLABORADOR, request=request, detalle=f"Invitó a {invitacion.email} como {invitacion.rol}")
             messages.success(request, f"Invitación creada para {invitacion.email}.")
             return redirect("accounts:colaboradores")
     else:
@@ -122,6 +124,7 @@ def colaboradores(request):
 def revocar_colaborador(request, pk):
     colaboracion = get_object_or_404(Colaboracion, pk=pk, propietario=request.user)
     colaboracion.delete()
+    registrar(Accion.COLABORADOR, request=request, detalle=f"Quitó el acceso de {colaboracion.email}")
     messages.success(request, f"Se quitó el acceso de {colaboracion.email}.")
     return redirect("accounts:colaboradores")
 
@@ -131,6 +134,7 @@ def revocar_colaborador(request, pk):
 def abandonar_negocio(request, pk):
     colaboracion = get_object_or_404(Colaboracion, pk=pk, colaborador=request.user)
     colaboracion.delete()
+    registrar(Accion.COLABORADOR, request=request, detalle=f"Dejó de colaborar en {colaboracion.propietario.nombre_negocio}")
     messages.success(request, f"Ya no colaboras en {colaboracion.propietario.nombre_negocio}.")
     return redirect("accounts:colaboradores")
 
@@ -147,6 +151,7 @@ def aceptar_invitacion(request, token):
             invitacion.colaborador = request.user
             invitacion.estado = Colaboracion.Estado.ACEPTADA
             invitacion.save(update_fields=["colaborador", "estado"])
+            registrar(Accion.COLABORADOR, request=request, detalle=f"Aceptó colaborar en {invitacion.propietario.nombre_negocio}")
         request.session[SESION_NEGOCIO] = invitacion.propietario_id
         messages.success(request, f"Ahora colaboras en {invitacion.propietario.nombre_negocio}.")
         return redirect("finances:dashboard")
@@ -207,6 +212,7 @@ def exportar_datos(request):
             u.colaboraciones_otorgadas.values("email", "rol", "estado")
         ),
     }
+    registrar(Accion.EXPORTAR_DATOS, request=request)
     respuesta = HttpResponse(
         json.dumps(datos, cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
         content_type="application/json; charset=utf-8",
@@ -223,6 +229,7 @@ def eliminar_cuenta(request):
         form = EliminarCuentaForm(request.POST, usuario=request.user)
         if form.is_valid():
             usuario = request.user
+            registrar(Accion.ELIMINAR_CUENTA, request=request, detalle=f"RUT {usuario.rut}")
             with transaction.atomic():
                 # Movimiento.categoria es PROTECT: se borran antes que las categorías.
                 usuario.movimientos.all().delete()

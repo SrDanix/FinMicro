@@ -180,3 +180,51 @@ class AlertasIntegracionTests(TestCase):
         self.assertEqual(alerta.codigo, "VENC-F29-2026-10")
         self.assertIn("20-11-2026", alerta.mensaje)
         self.assertEqual(len(mail.outbox), 1)
+
+
+# ---------- RF-32: auditoría ----------
+from django.contrib.admin.sites import site
+from django.test import RequestFactory
+
+from .models import RegistroAuditoria
+
+
+class AuditoriaTests(TestCase):
+    def setUp(self):
+        self.usuario = Usuario.objects.create_user(
+            username="duena", email="duena@example.com", password="UnaClaveSegura.2026",
+            rut="11111111-1", nombre_negocio="Tienda",
+        )
+        asegurar_plan_basico(self.usuario)
+
+    def test_registra_inicio_fallo_y_cierre_de_sesion_sin_guardar_claves(self):
+        self.client.post(reverse("accounts:login"), {"username": "duena", "password": "mala"})
+        self.client.post(reverse("accounts:login"), {"username": "duena", "password": "UnaClaveSegura.2026"},
+                         REMOTE_ADDR="10.0.0.7")
+        self.client.post(reverse("accounts:logout"))
+        acciones = list(RegistroAuditoria.objects.order_by("creado_en").values_list("accion", flat=True))
+        self.assertEqual(acciones, ["login_fallido", "login", "logout"])
+        self.assertEqual(RegistroAuditoria.objects.get(accion="login").ip, "10.0.0.7")
+        self.assertFalse(RegistroAuditoria.objects.filter(detalle__contains="mala").exists())
+
+    def test_eliminar_movimiento_y_cuenta_quedan_registrados(self):
+        self.client.login(username="duena", password="UnaClaveSegura.2026")
+        ventas = Categoria.objects.get(nombre="Ventas", usuario=None)
+        movimiento = Movimiento.objects.create(usuario=self.usuario, categoria=ventas, tipo="ingreso",
+                                               monto=1000, fecha=timezone.localdate())
+        self.client.post(reverse("finances:eliminar_movimiento", args=[movimiento.pk]))
+        self.client.post(reverse("accounts:eliminar_cuenta"), {"password": "UnaClaveSegura.2026"})
+        self.assertTrue(RegistroAuditoria.objects.filter(accion="eliminar_movimiento").exists())
+        # El registro sobrevive a la cuenta eliminada, con el nombre como texto.
+        registro = RegistroAuditoria.objects.get(accion="eliminar_cuenta")
+        self.assertIsNone(registro.usuario)
+        self.assertEqual(registro.nombre_usuario, "duena")
+
+    def test_el_administrador_no_puede_editar_ni_borrar_registros(self):
+        admin_auditoria = site._registry[RegistroAuditoria]
+        request = RequestFactory().get("/")
+        request.user = Usuario.objects.create_superuser("root", "r@example.com", "UnaClaveSegura.2026",
+                                                        rut="22222222-2", nombre_negocio="Admin")
+        self.assertFalse(admin_auditoria.has_add_permission(request))
+        self.assertFalse(admin_auditoria.has_change_permission(request))
+        self.assertFalse(admin_auditoria.has_delete_permission(request))

@@ -35,3 +35,42 @@ class Alerta(models.Model):
 
     def __str__(self):
         return f"[{self.get_severidad_display()}] {self.mensaje}"
+
+
+class RegistroAuditoria(models.Model):
+    """RF-32: registro de acciones sensibles. Solo se agrega; nunca se edita ni se borra desde la app.
+
+    Guarda el nombre de usuario como texto para que el registro sobreviva
+    aunque la cuenta se elimine (RF-07).
+    """
+
+    class Accion(models.TextChoices):
+        INICIO_SESION = "login", "Inicio de sesión"
+        INICIO_FALLIDO = "login_fallido", "Inicio de sesión fallido"
+        CIERRE_SESION = "logout", "Cierre de sesión"
+        CAMBIO_PLAN = "cambio_plan", "Cambio de plan"
+        PAGO = "pago", "Pago de suscripción"
+        VENCIMIENTO_PLAN = "vencimiento_plan", "Vencimiento de plan"
+        ELIMINAR_MOVIMIENTO = "eliminar_movimiento", "Eliminación de movimiento"
+        IMPORTAR = "importar", "Importación de movimientos"
+        EXPORTAR_DATOS = "exportar_datos", "Exportación de datos personales"
+        ELIMINAR_CUENTA = "eliminar_cuenta", "Eliminación de cuenta"
+        COLABORADOR = "colaborador", "Cambio de colaboradores"
+        CONSENTIMIENTO = "consentimiento", "Aceptación de términos"
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    nombre_usuario = models.CharField(max_length=150, blank=True)
+    accion = models.CharField(max_length=30, choices=Accion.choices)
+    detalle = models.CharField(max_length=300, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Registro de auditoría"
+        verbose_name_plural = "Registros de auditoría"
+        ordering = ["-creado_en"]
+
+    def __str__(self):
+        return f"{self.creado_en:%d-%m-%Y %H:%M} {self.nombre_usuario} {self.get_accion_display()}"

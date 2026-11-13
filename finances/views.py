@@ -21,6 +21,7 @@ from django.views.decorators.http import require_POST
 
 from accounts.negocio import requiere_edicion
 from core.alertas import revisar_limite_plan, revisar_movimiento, revisar_vencimientos
+from core.auditoria import Accion, registrar
 from core.models import Alerta
 from . import exportacion, importacion
 from .forms import CategoriaForm, FiltroMovimientosForm, ImportarMovimientosForm, MovimientoForm, ProductoForm
@@ -187,6 +188,7 @@ def editar_movimiento(request, pk):
 def eliminar_movimiento(request, pk):
     movimiento = get_object_or_404(Movimiento, pk=pk, usuario=request.negocio)
     if request.method == "POST":
+        registrar(Accion.ELIMINAR_MOVIMIENTO, request=request, detalle=f"Negocio {request.negocio.username}: {movimiento}")
         movimiento.delete()
         messages.success(request, "Movimiento eliminado.")
         return redirect("finances:listar_movimientos")
@@ -403,6 +405,7 @@ def confirmar_importacion(request):
             for f in resultado.aceptadas
         )
     revisar_limite_plan(request.negocio, timezone.localdate())
+    registrar(Accion.IMPORTAR, request=request, detalle=f"{len(resultado.aceptadas)} movimientos en {request.negocio.username}")
     messages.success(request, f"Se importaron {len(resultado.aceptadas)} movimientos.")
     return redirect("finances:listar_movimientos")
 

@@ -10,5 +10,6 @@ urlpatterns = [
     path("pago-simulado/<int:suscripcion_id>/", views.pago_simulado, name="pago_simulado"),
     path("webhook/khipu/", views.webhook_khipu, name="webhook_khipu"),
     path("webhook/flow/", views.webhook_flow, name="webhook_flow"),
+    path("pago/retorno/", views.retorno_pago, name="retorno_pago"),
     path("mi-suscripcion/", views.mi_suscripcion, name="mi_suscripcion"),
 ]
