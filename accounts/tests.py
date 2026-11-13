@@ -11,6 +11,7 @@ from django.utils import timezone
 
 from finances.models import Categoria, Movimiento
 from subscriptions.services import asegurar_plan_basico
+from .legal import registrar_aceptacion
 from .models import Colaboracion, Usuario, calcular_dv_rut, validar_rut
 from .negocio import SESION_NEGOCIO
 
@@ -22,6 +23,7 @@ def crear_usuario(username, email, rut, negocio="Negocio"):
         username=username, email=email, password=CLAVE, rut=rut, nombre_negocio=negocio
     )
     asegurar_plan_basico(usuario)
+    registrar_aceptacion(usuario)
     return usuario
 
 
@@ -49,7 +51,7 @@ class RegistroTests(TestCase):
         datos = {
             "username": "nuevo", "email": "nuevo@example.com", "rut": "12.345.678-5",
             "nombre_negocio": "Almacén", "tipo_negocio": "CO",
-            "password1": CLAVE, "password2": CLAVE,
+            "password1": CLAVE, "password2": CLAVE, "acepta_terminos": "on",
         }
         datos.update(extra)
         return datos
@@ -204,7 +206,7 @@ class RecuperarClaveTests(TestCase):
         crear_usuario("dueno", "dueno@example.com", "11111111-1")
         self.client.post(reverse("accounts:password_reset"), {"email": "dueno@example.com"})
         self.assertEqual(len(mail.outbox), 1)
-        enlace = next(l for l in mail.outbox[0].body.splitlines() if "/clave/recuperar/" in l)
+        enlace = next(linea for linea in mail.outbox[0].body.splitlines() if "/clave/recuperar/" in linea)
         ruta = enlace.split("testserver", 1)[1]
         respuesta = self.client.get(ruta, follow=True)
         self.assertContains(respuesta, "Nueva contraseña")
@@ -231,6 +233,10 @@ class CrearUsuariosPruebaTests(TestCase):
         for usuario in (basico, premium, nuevo):
             validar_rut(usuario.rut)
         self.assertTrue(self.client.login(username="prueba_premium", password=CLAVE))
+        # RF-29: la persona que use la cuenta de prueba acepta los términos al entrar.
+        respuesta = self.client.get(reverse("finances:dashboard"))
+        self.assertRedirects(respuesta, reverse("accounts:aceptar_terminos") + "?next=/finanzas/")
+        self.client.post(reverse("accounts:aceptar_terminos"), {"acepta": "on", "next": "/finanzas/"})
         self.assertEqual(self.client.get(reverse("finances:dashboard")).status_code, 200)
 
     def test_no_duplica_si_se_ejecuta_dos_veces(self):
@@ -240,3 +246,61 @@ class CrearUsuariosPruebaTests(TestCase):
         self.assertEqual(Usuario.objects.filter(username__startswith="prueba_").count(), 3)
         self.assertEqual(Movimiento.objects.count(), movimientos)
         self.assertTrue(self.client.login(username="prueba_basico", password=CLAVE))
+
+
+# ---------- RF-29: consentimiento ----------
+from core.models import RegistroAuditoria
+
+from .models import Consentimiento, DocumentoLegal
+
+
+class ConsentimientoTests(TestCase):
+    def _registrar(self, **extra):
+        datos = {"username": "nuevo", "email": "nuevo@example.com", "rut": "12.345.678-5",
+                 "nombre_negocio": "Almacén", "tipo_negocio": "CO", "password1": CLAVE, "password2": CLAVE}
+        datos.update(extra)
+        return self.client.post(reverse("accounts:registro"), datos, REMOTE_ADDR="10.1.2.3")
+
+    def test_registro_exige_aceptar_y_guarda_version_fecha_e_ip(self):
+        respuesta = self._registrar()
+        self.assertContains(respuesta, "Debes aceptar los términos")
+        self.assertFalse(Usuario.objects.exists())
+
+        self._registrar(acepta_terminos="on")
+        aceptados = Consentimiento.objects.filter(usuario__username="nuevo")
+        self.assertEqual(sorted(aceptados.values_list("documento__tipo", flat=True)), ["privacidad", "terminos"])
+        self.assertEqual({c.ip for c in aceptados}, {"10.1.2.3"})
+        self.assertTrue(RegistroAuditoria.objects.filter(accion="consentimiento").exists())
+
+    def test_version_nueva_se_pide_al_volver_a_entrar(self):
+        usuario = crear_usuario("duena", "duena@example.com", "11111111-1")
+        self.client.login(username="duena", password=CLAVE)
+        self.assertEqual(self.client.get(reverse("finances:dashboard")).status_code, 200)
+
+        nueva = DocumentoLegal.objects.create(tipo="privacidad", version="2.0", contenido="Texto nuevo")
+        respuesta = self.client.get(reverse("finances:indicadores"))
+        self.assertRedirects(respuesta, reverse("accounts:aceptar_terminos") + "?next=/finanzas/indicadores/")
+        # Mientras tanto puede leer los documentos, descargar sus datos o eliminar su cuenta.
+        self.assertEqual(self.client.get(reverse("documento_legal", args=["privacidad"])).status_code, 200)
+        self.assertEqual(self.client.get(reverse("accounts:exportar_datos")).status_code, 200)
+
+        pantalla = self.client.get(respuesta.url)
+        self.assertContains(pantalla, "versión 2.0")
+        self.assertNotContains(pantalla, "Términos y condiciones</a>")   # ya aceptó los términos vigentes
+        respuesta = self.client.post(reverse("accounts:aceptar_terminos"),
+                                     {"acepta": "on", "next": "https://malicioso.example/"})
+        self.assertRedirects(respuesta, reverse("finances:dashboard"))
+        self.assertTrue(Consentimiento.objects.filter(usuario=usuario, documento=nueva).exists())
+        self.assertEqual(self.client.get(reverse("finances:indicadores")).status_code, 200)
+
+    def test_documento_publico_con_huella(self):
+        documento = DocumentoLegal.objects.get(tipo="terminos", version="1.0")
+        self.assertEqual(len(documento.huella), 64)
+        respuesta = self.client.get(reverse("documento_legal", args=["terminos"]))
+        self.assertContains(respuesta, documento.huella)
+        self.assertEqual(self.client.get(reverse("documento_legal", args=["otro"])).status_code, 404)
+
+    def test_huella_cambia_con_el_contenido(self):
+        a = DocumentoLegal.objects.create(tipo="terminos", version="9.0", contenido="A")
+        b = DocumentoLegal.objects.create(tipo="terminos", version="9.1", contenido="B")
+        self.assertNotEqual(a.huella, b.huella)

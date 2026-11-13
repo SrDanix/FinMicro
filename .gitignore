@@ -18,3 +18,5 @@ demo_cuenta.txt
 .claude/
 Thumbs.db
 desktop.ini
+.coverage
+respaldos/

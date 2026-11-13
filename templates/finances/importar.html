@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Importar movimientos{% endblock %}
+{% block titulo_pagina %}Importar movimientos{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta mt-0" style="max-width:640px;">
+  <p class="texto-tenue mt-0">
+    Sube tus ventas y gastos desde un Excel o CSV. Antes de guardar verás una vista previa; si alguna fila tiene un error no se importa nada, para que no queden datos a medias.
+  </p>
+  <p><a href="{% url 'finances:plantilla_importacion' %}" class="btn btn-fantasma btn-chico">Descargar plantilla de ejemplo</a></p>
+  <form method="post" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+    {% include "partials/_campos_formulario.html" %}
+    <div class="flex-entre">
+      <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma">Cancelar</a>
+      <button type="submit" class="btn btn-primario">Ver vista previa</button>
+    </div>
+  </form>
+</div>
+
+{% if resultado %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Vista previa</h3></div>
+  <p>
+    <span class="insignia insignia-ingreso">{{ resultado.aceptadas|length }} para importar</span>
+    {% if resultado.duplicadas %}<span class="insignia insignia-info">{{ resultado.duplicadas|length }} ya registradas (se omiten)</span>{% endif %}
+    {% if resultado.rechazadas %}<span class="insignia insignia-gasto">{{ resultado.rechazadas|length }} con errores</span>{% endif %}
+  </p>
+
+  {% for error in resultado.errores_generales %}<div class="aviso aviso-error">{{ error }}</div>{% endfor %}
+
+  {% if resultado.rechazadas %}
+  <div class="aviso aviso-error">Corrige estas filas en tu archivo y vuelve a subirlo. No se importó nada.</div>
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead><tr><th>Fila</th><th>Errores</th></tr></thead>
+      <tbody>
+      {% for numero, errores in resultado.rechazadas %}
+        <tr><td>{{ numero }}</td><td>{{ errores|join:" " }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if resultado.aceptadas %}
+  <div class="tabla-envoltorio" style="margin-top:12px;">
+    <table class="tabla">
+      <thead><tr><th>Fila</th><th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th class="col-monto">Monto</th></tr></thead>
+      <tbody>
+      {% for f in resultado.aceptadas %}
+        <tr>
+          <td>{{ f.numero }}</td><td>{{ f.fecha|date:"d/m/Y" }}</td><td>{{ f.tipo|capfirst }}</td>
+          <td>{{ f.categoria }}</td><td class="texto-tenue">{{ f.descripcion|default:"—" }}</td>
+          <td class="col-monto">${{ f.monto|floatformat:"0g" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if resultado.se_puede_importar %}
+  <form method="post" action="{% url 'finances:confirmar_importacion' %}" style="margin-top:16px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primario">Importar {{ resultado.aceptadas|length }} movimiento{{ resultado.aceptadas|length|pluralize }}</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

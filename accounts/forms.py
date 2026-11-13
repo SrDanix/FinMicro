@@ -38,6 +38,12 @@ class RegistroForm(UserCreationForm):
             "emite_boletas_honorarios",
         )
 
+    # RF-29: el consentimiento se registra con fecha y versión de cada documento.
+    acepta_terminos = forms.BooleanField(
+        label="Acepto los términos y condiciones y la política de privacidad",
+        error_messages={"required": "Debes aceptar los términos y la política de privacidad para crear tu cuenta."},
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _estilizar(self)
@@ -73,11 +79,21 @@ class ConfiguracionForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ("regimen_tributario", "afecto_iva", "emite_boletas_honorarios", "meta_ventas_mensual")
+        fields = (
+            "regimen_tributario",
+            "afecto_iva",
+            "emite_boletas_honorarios",
+            "meta_ventas_mensual",
+            "saldo_caja_inicial",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _estilizar(self)
+        self.fields["saldo_caja_inicial"].required = False
+
+    def clean_saldo_caja_inicial(self):
+        return self.cleaned_data.get("saldo_caja_inicial") or 0
 
     def clean(self):
         datos = super().clean()
@@ -126,3 +142,10 @@ class EliminarCuentaForm(forms.Form):
         if not self.usuario.check_password(password):
             raise forms.ValidationError("La contraseña no es correcta.")
         return password
+
+
+class AceptarTerminosForm(forms.Form):
+    acepta = forms.BooleanField(
+        label="Leí y acepto los documentos indicados",
+        error_messages={"required": "Debes aceptar para seguir usando FinMicro."},
+    )

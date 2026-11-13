@@ -74,3 +74,21 @@ class VANTIRPaybackTests(SimpleTestCase):
         )
         self.assertFalse(resultado["viable"])
         self.assertLess(resultado["van"], 0)
+
+# ---------- RF-36: escenarios ----------
+from .services import proyectar_escenarios
+
+
+class EscenariosTests(SimpleTestCase):
+    def test_supuestos_aplicados_a_la_base(self):
+        escenarios = {e["nombre"]: e for e in proyectar_escenarios([100, 100], [50, 50])}
+        # Optimista: 110 − 47,5 (→ 48) = 62 por mes.
+        self.assertEqual([m["resultado"] for m in escenarios["Optimista"]["meses"]], [62, 62])
+        self.assertEqual(escenarios["Base"]["acumulado"], 100)
+        # Pesimista: 85 − 52,5 (→ 53) = 32 por mes.
+        self.assertEqual(escenarios["Pesimista"]["acumulado"], 64)
+        self.assertEqual((escenarios["Pesimista"]["variacion_ingresos"], escenarios["Pesimista"]["variacion_gastos"]), (-15, 5))
+
+    def test_ingresos_y_gastos_deben_cubrir_los_mismos_meses(self):
+        with self.assertRaises(ValueError):
+            proyectar_escenarios([1, 2], [1])

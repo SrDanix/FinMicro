@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Alertas{% endblock %}
+{% block titulo_pagina %}Alertas{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta mt-0">
+  {% if alertas %}
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead><tr><th>Fecha</th><th>Tipo</th><th>Mensaje</th><th class="col-acciones"></th></tr></thead>
+      <tbody>
+      {% for alerta in alertas %}
+        <tr{% if alerta.leida %} class="texto-tenue"{% endif %}>
+          <td>{{ alerta.creada_en|date:"d/m/Y" }}</td>
+          <td><span class="insignia {% if alerta.severidad == 'urgente' %}insignia-gasto{% elif alerta.severidad == 'aviso' %}insignia-premium{% else %}insignia-info{% endif %}">{{ alerta.get_severidad_display }}</span></td>
+          <td>{{ alerta.mensaje }}{% if alerta.enlace %} <a href="{{ alerta.enlace }}">Ver</a>{% endif %}</td>
+          <td class="col-acciones">
+            {% if not alerta.leida %}
+            <form method="post" action="{% url 'core:marcar_alerta_leida' alerta.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-secundario btn-chico">Marcar leída</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="estado-vacio">
+    <h3>No tienes alertas</h3>
+    <p class="texto-tenue">Aquí verás vencimientos tributarios, el avance del límite de tu plan y gastos fuera de lo habitual.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

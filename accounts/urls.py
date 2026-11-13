@@ -16,6 +16,7 @@ urlpatterns = [
     path("negocio/cambiar/", views.cambiar_negocio, name="cambiar_negocio"),
     path("mis-datos/exportar/", views.exportar_datos, name="exportar_datos"),
     path("eliminar/", views.eliminar_cuenta, name="eliminar_cuenta"),
+    path("terminos/aceptar/", views.aceptar_terminos, name="aceptar_terminos"),
     path(
         "login/",
         auth_views.LoginView.as_view(template_name="accounts/login.html"),

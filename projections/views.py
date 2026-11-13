@@ -4,58 +4,38 @@ import json
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from finances.models import Categoria, Movimiento
 from finances.views import MESES_ABREV
 from .forms import EvaluadorViabilidadForm
-from .services import evaluar_viabilidad, proyectar_ingresos
+from .historial import historial_ingresos_mensuales, recortar_inicio
+from finances.models import Categoria
+
+from .services import evaluar_viabilidad, proyectar_escenarios, proyectar_ingresos
 
 
 def _etiqueta_mes(fecha):
     return f"{MESES_ABREV[fecha.month - 1]} {fecha.year}"
 
 
-def _historial_ingresos_mensuales(usuario, meses=6):
-    """Últimos `meses` totales de ingresos, en orden cronológico ascendente.
-
-    Se recorre mes a mes (en vez de agrupar con TruncMonth) para poder
-    incluir explícitamente los meses sin ningún ingreso registrado como
-    $0 — la regresión lineal necesita una serie continua, no solo los
-    meses que tuvieron movimientos.
-
-    Solo se usan meses completos (termina en el mes anterior): el mes en
-    curso tiene datos parciales y arrastraría la tendencia hacia abajo.
-    """
-    mes_actual = timezone.localdate().replace(day=1)
-    etiquetas, valores = [], []
-    for i in range(meses, 0, -1):
-        mes_ref = mes_actual - relativedelta(months=i)
-        total = Movimiento.objects.filter(
-            usuario=usuario,
-            tipo=Categoria.Tipo.INGRESO,
-            fecha__year=mes_ref.year,
-            fecha__month=mes_ref.month,
-        ).aggregate(t=Sum("monto"))["t"] or 0
-        etiquetas.append(_etiqueta_mes(mes_ref))
-        valores.append(total)
-    return etiquetas, valores
-
-
 @login_required
 def proyeccion_ingresos(request):
-    etiquetas, historial = _historial_ingresos_mensuales(request.negocio, meses=6)
+    meses, historial = historial_ingresos_mensuales(request.negocio, meses=6)
+    etiquetas = [_etiqueta_mes(m) for m in meses]
+    serie = recortar_inicio(historial)
     meses_con_datos = sum(1 for v in historial if v > 0)
 
     proyeccion = None
+    escenarios = None
     etiquetas_proyeccion = []
-    if meses_con_datos >= 2:
-        # Los meses en $0 antes del primer ingreso son meses en que el
-        # usuario aún no usaba FinMicro, no meses sin ventas.
-        inicio = next(i for i, v in enumerate(historial) if v > 0)
-        proyeccion = proyectar_ingresos(historial[inicio:], meses_futuros=3)
+    if serie is not None:
+        proyeccion = proyectar_ingresos(serie, meses_futuros=3)
+        # RF-36: los gastos se proyectan con el mismo método.
+        _, historial_gastos = historial_ingresos_mensuales(request.negocio, meses=6, tipo=Categoria.Tipo.GASTO)
+        serie_gastos = recortar_inicio(historial_gastos)
+        gastos = proyectar_ingresos(serie_gastos, meses_futuros=3) if serie_gastos else [0, 0, 0]
+        escenarios = proyectar_escenarios(proyeccion, gastos)
         # La proyección empieza en el mes en curso (aún incompleto).
         mes_actual = timezone.localdate().replace(day=1)
         etiquetas_proyeccion = [
@@ -74,6 +54,8 @@ def proyeccion_ingresos(request):
         {
             "suficientes_datos": meses_con_datos >= 2,
             "proyeccion": proyeccion,
+            "escenarios": escenarios,
+            "etiquetas_proyeccion": etiquetas_proyeccion,
             "grafico_datos": json.dumps(grafico),
         },
     )

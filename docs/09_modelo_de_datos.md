@@ -2,8 +2,8 @@
 
 **Actividad 3.4** · Responsable: Marcelo · Aprueba: Danilo · Semana 7
 
-Refleja los modelos implementados en el repositorio al cierre del Sprint 1. Las
-entidades de sprints futuros aparecen al final como propuesta.
+Refleja los modelos implementados en el repositorio al 13-11-2026 (sprints 1 a 6). La
+tabla del final resume qué agregó cada sprint. Imagen para anexos: [diagramas/modelo_de_datos.png](diagramas/modelo_de_datos.png).
 
 ```mermaid
 erDiagram
@@ -14,6 +14,13 @@ erDiagram
     USUARIO |o--o{ COLABORACION : "recibe (colaborador)"
     PLAN ||--o{ SUSCRIPCION : "define"
     CATEGORIA ||--o{ MOVIMIENTO : "clasifica"
+    USUARIO ||--o{ PRODUCTO : "vende (negocio)"
+    PRODUCTO |o--o{ MOVIMIENTO : "venta desde catálogo"
+    USUARIO ||--o{ ALERTA : "recibe (negocio)"
+    USUARIO ||--o{ CONSENTIMIENTO : "acepta"
+    DOCUMENTO_LEGAL ||--o{ CONSENTIMIENTO : "versión aceptada"
+    USUARIO |o--o{ REGISTRO_AUDITORIA : "acciones sensibles"
+    USUARIO ||--o{ CONSULTA_ASISTENTE : "pregunta (negocio)"
 
     USUARIO {
         bigint id PK
@@ -28,6 +35,7 @@ erDiagram
         bool afecto_iva
         bool emite_boletas_honorarios
         int meta_ventas_mensual "nullable"
+        int saldo_caja_inicial
         datetime fecha_registro
     }
     COLABORACION {
@@ -69,16 +77,79 @@ erDiagram
         varchar tipo "ingreso | gasto"
         bigint usuario_id FK "null = del sistema"
         bool es_gravable_iva
+        varchar naturaleza "fijo | variable | vacío"
     }
     MOVIMIENTO {
         bigint id PK
         bigint usuario_id FK "dueño del negocio"
         bigint categoria_id FK "PROTECT"
+        bigint producto_id FK "nullable, SET_NULL"
+        int cantidad "nullable"
         varchar tipo "= categoria.tipo"
         decimal monto "12,2 · mínimo 1"
         date fecha
         varchar descripcion
         datetime creado_en
+    }
+    PRODUCTO {
+        bigint id PK
+        bigint usuario_id FK
+        varchar nombre "UK con usuario"
+        decimal precio
+        bool afecto_iva
+        bool activo
+    }
+    TASA_TRIBUTARIA {
+        bigint id PK
+        varchar codigo "IVA | RET_HON"
+        decimal valor
+        date vigente_desde "UK con codigo"
+        date vigente_hasta "nullable"
+        varchar fuente
+    }
+    FERIADO {
+        bigint id PK
+        date fecha UK
+        varchar nombre
+    }
+    ALERTA {
+        bigint id PK
+        bigint negocio_id FK
+        varchar codigo "UK con negocio"
+        varchar severidad
+        varchar mensaje
+        bool leida
+    }
+    DOCUMENTO_LEGAL {
+        bigint id PK
+        varchar tipo "terminos | privacidad"
+        varchar version "UK con tipo"
+        text contenido
+        char huella "SHA-256"
+        datetime vigente_desde
+    }
+    CONSENTIMIENTO {
+        bigint id PK
+        bigint usuario_id FK
+        bigint documento_id FK "PROTECT"
+        datetime aceptado_en
+        inet ip
+    }
+    REGISTRO_AUDITORIA {
+        bigint id PK
+        bigint usuario_id FK "SET_NULL"
+        varchar nombre_usuario
+        varchar accion
+        varchar detalle
+        inet ip
+        datetime creado_en
+    }
+    CONSULTA_ASISTENTE {
+        bigint id PK
+        bigint negocio_id FK
+        varchar pregunta
+        text respuesta
+        datetime creada_en
     }
 ```
 
@@ -100,14 +171,21 @@ erDiagram
 - **`Movimiento.tipo` se duplica desde la categoría** para filtrar sin JOIN; la consistencia se garantiza en `clean()` (RN-07).
 - **Montos en `DECIMAL`**, nunca en coma flotante.
 
-## Entidades propuestas para sprints futuros
+## Entidades agregadas en los sprints 2 a 6 (noviembre 2026)
 
-| Sprint | Entidad | Campos principales |
-|---|---|---|
-| 2 | `Producto` | negocio, nombre, precio, afecto_iva, activo |
-| 2 | `Movimiento` + | producto (FK opcional), cantidad |
-| 3 | `Categoria` + | naturaleza (fijo / variable) |
-| 4 | `TasaTributaria` | impuesto, año, tasa, vigente_desde |
-| 4 | `Alerta` | negocio, tipo, mensaje, fecha, leída |
-| 5 | `Consentimiento` | usuario, documento, versión, fecha, IP |
-| 5 | `RegistroAuditoria` | usuario, acción, objeto, fecha, IP |
+| Sprint / RF | Entidad o campo | Campos principales | Restricciones |
+|---|---|---|---|
+| S2 · RF-11 | `Producto` | usuario (negocio), nombre, precio, afecto_iva, activo | único (usuario, nombre) |
+| S2 · RF-11 | `Movimiento` + | producto (FK opcional, `SET_NULL`), cantidad | solo ingresos llevan producto (RN-19) |
+| S3 · RF-16 | `Usuario` + | saldo_caja_inicial | entero, por defecto 0 |
+| S3 · RF-19 | `Categoria` + | naturaleza (`fijo` / `variable` / vacío) | vacío en categorías de ingreso |
+| S4 · RF-25 | `TasaTributaria` | codigo (IVA, RET_HON), valor, vigente_desde, vigente_hasta, fuente | único (codigo, vigente_desde) |
+| S4 · RF-23 | `Feriado` | fecha, nombre | fecha única |
+| S4 · RF-24 | `Alerta` (app `core`) | negocio, codigo, severidad, mensaje, enlace, leida | único (negocio, codigo) |
+| S5 · RF-29 | `DocumentoLegal` | tipo, version, contenido, huella SHA-256, vigente_desde | único (tipo, version); no editable |
+| S5 · RF-29 | `Consentimiento` | usuario, documento (`PROTECT`), aceptado_en, ip | único (usuario, documento) |
+| S5 · RF-32 | `RegistroAuditoria` (app `core`) | usuario (`SET_NULL`), nombre_usuario, accion, detalle, ip, creado_en | solo se agrega (RN-30) |
+| S6 · RF-37 | `ConsultaAsistente` (app `core`) | negocio, pregunta, respuesta, creada_en | se borra con la cuenta |
+
+Cargas iniciales por migración: categorías del sistema con su naturaleza (`finances` 0004), tasas y
+feriados 2026–2027 (`taxes` 0002) y la versión 1.0 de los documentos legales (`accounts` 0005).

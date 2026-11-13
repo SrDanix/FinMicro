@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Aceptar términos{% endblock %}
+{% block titulo_pagina %}Antes de seguir{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta mt-0" style="max-width:640px;">
+  <p class="mt-0">Para seguir usando FinMicro necesitamos que leas y aceptes:</p>
+  <ul>
+    {% for d in documentos %}
+      <li><a href="{% url 'documento_legal' d.tipo %}" target="_blank" rel="noopener">{{ d.get_tipo_display }}</a> (versión {{ d.version }})</li>
+    {% endfor %}
+  </ul>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% include "partials/_campos_formulario.html" %}
+    <button type="submit" class="btn btn-primario">Aceptar y continuar</button>
+  </form>
+  <p class="texto-ayuda">Si no estás de acuerdo, puedes <a href="{% url 'accounts:exportar_datos' %}">descargar tus datos</a> y <a href="{% url 'accounts:eliminar_cuenta' %}">eliminar tu cuenta</a>.</p>
+</div>
+{% endblock %}

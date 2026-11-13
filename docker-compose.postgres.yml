@@ -1,0 +1,28 @@
+# X-04 · PostgreSQL en la misma EC2 (opción B de docs/17_base_de_datos_aws.md).
+# Se suma al archivo de producción:
+#   docker compose -f docker-compose.prod.yml -f docker-compose.postgres.yml up -d --build
+# Requiere en .env: DB_ENGINE=postgresql, DB_HOST=db, DB_NAME, DB_USER y DB_PASSWORD.
+# La base no publica puertos: solo la ve el contenedor "web" por la red interna.
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:?Define DB_NAME en .env}
+      POSTGRES_USER: ${DB_USER:?Define DB_USER en .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+    volumes:
+      - finmicro_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  finmicro_postgres:

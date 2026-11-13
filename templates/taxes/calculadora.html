@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Impuestos{% endblock %}
-{% block titulo_pagina %}Calculadora de impuestos{% endblock %}
+{% block titulo_pagina %}Impuestos{% endblock %}
+
+{% block acciones_barra %}
+<a href="{% url 'taxes:calendario' %}" class="btn btn-secundario">Calendario tributario</a>
+{% endblock %}
 
 {% block contenido %}
 <p class="texto-tenue" style="max-width:70ch;">
@@ -8,9 +12,43 @@
   valida siempre el resultado en sii.cl antes de declarar.
 </p>
 
+<div class="tarjeta" style="margin-top:16px;">
+  <div class="tarjeta-titulo flex-entre">
+    <h3>IVA del mes según tus movimientos</h3>
+    {% if iva_automatico %}
+    <form method="get" style="display:flex; gap:8px; align-items:center;">
+      <label for="mes" class="texto-tenue">Mes</label>
+      <input type="month" id="mes" name="mes" value="{{ mes_valor }}" class="campo-input" style="width:auto;" onchange="this.form.submit()">
+      <noscript><button type="submit" class="btn btn-secundario btn-chico">Ver</button></noscript>
+    </form>
+    {% endif %}
+  </div>
+  {% if iva_automatico %}
+    {% with r=iva_automatico %}
+    <div class="tabla-envoltorio">
+    <table class="tabla">
+      <tr><td class="texto-tenue">Ventas afectas (con IVA)</td><td class="col-monto">${{ r.ventas_brutas|floatformat:"0g" }}</td><td class="texto-tenue">Neto ${{ r.ventas_netas|floatformat:"0g" }}</td></tr>
+      <tr><td class="texto-tenue">Compras afectas (con IVA)</td><td class="col-monto">${{ r.compras_brutas|floatformat:"0g" }}</td><td class="texto-tenue">Neto ${{ r.compras_netas|floatformat:"0g" }}</td></tr>
+      <tr><td class="texto-tenue">IVA débito</td><td class="col-monto">${{ r.iva_debito|floatformat:"0g" }}</td><td></td></tr>
+      <tr><td class="texto-tenue">IVA crédito</td><td class="col-monto">${{ r.iva_credito|floatformat:"0g" }}</td><td></td></tr>
+      {% if r.remanente_anterior %}<tr><td class="texto-tenue">Remanente de meses anteriores</td><td class="col-monto">${{ r.remanente_anterior|floatformat:"0g" }}</td><td></td></tr>{% endif %}
+      <tr>
+        <td><strong>{% if r.iva_a_pagar %}IVA a pagar{% else %}Remanente para el mes siguiente{% endif %}</strong></td>
+        <td class="col-monto {% if r.iva_a_pagar %}texto-gasto{% else %}texto-ingreso{% endif %}"><strong>${% if r.iva_a_pagar %}{{ r.iva_a_pagar|floatformat:"0g" }}{% else %}{{ r.remanente_siguiente|floatformat:"0g" }}{% endif %}</strong></td>
+        <td></td>
+      </tr>
+    </table>
+    </div>
+    <p class="texto-ayuda">Se consideran los movimientos en categorías "Afecta a IVA" (y productos afectos), suponiendo que los montos registrados incluyen IVA y que tus compras tienen factura. Es una estimación: confírmala con tu contador antes de declarar el F29.</p>
+    {% endwith %}
+  {% else %}
+    <p class="texto-tenue mt-0">Si tus ventas están afectas a IVA, márcalo en <a href="{% url 'accounts:configuracion' %}">Configuración</a> y FinMicro calculará tu IVA del mes con tus movimientos.</p>
+  {% endif %}
+</div>
+
 <div class="grid grid-2" style="margin-top:16px;">
   <div class="tarjeta">
-    <div class="tarjeta-titulo"><h3>IVA mensual (19%)</h3></div>
+    <div class="tarjeta-titulo"><h3>Calculadora de IVA ({{ tasa_iva_porcentaje }}%)</h3></div>
     <form method="post" novalidate>
       {% csrf_token %}
       <input type="hidden" name="formulario" value="iva">
@@ -53,5 +91,20 @@
     </table>
     {% endif %}
   </div>
+</div>
+
+<div class="tarjeta" style="margin-top:16px;">
+  <div class="tarjeta-titulo"><h3>Tasas usadas</h3></div>
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead><tr><th>Impuesto</th><th class="col-monto">Tasa</th><th>Vigencia</th><th>Fuente</th></tr></thead>
+      <tbody>
+      {% for t in tasas %}
+        <tr><td>{{ t.get_codigo_display }}</td><td class="col-monto">{{ t.porcentaje }}%</td><td>{{ t.vigente_desde|date:"d/m/Y" }} – {{ t.vigente_hasta|date:"d/m/Y"|default:"sin término" }}</td><td class="texto-tenue">{{ t.fuente }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="texto-ayuda">El equipo de FinMicro actualiza estas tasas cuando cambia la ley.</p>
 </div>
 {% endblock %}

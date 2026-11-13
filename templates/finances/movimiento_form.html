@@ -8,7 +8,10 @@
     {% csrf_token %}
     {% include "partials/_campos_formulario.html" %}
     <div class="flex-entre">
-      <a href="{% url 'finances:crear_categoria' %}" class="btn btn-fantasma btn-chico">+ Crear categoría propia</a>
+      <span>
+        <a href="{% url 'finances:crear_categoria' %}" class="btn btn-fantasma btn-chico">+ Categoría propia</a>
+        <a href="{% url 'finances:crear_producto' %}" class="btn btn-fantasma btn-chico">+ Producto</a>
+      </span>
       <div>
         <a href="{% url 'finances:listar_movimientos' %}" class="btn btn-fantasma">Cancelar</a>
         <button type="submit" class="btn btn-primario">Guardar</button>
@@ -37,6 +40,25 @@
     }
     tipo.addEventListener("change", filtrar);
     filtrar();
+  })();
+
+  // RF-11: con un producto del catálogo, monto = precio × cantidad.
+  (function () {
+    const producto = document.getElementById("id_producto");
+    const cantidad = document.getElementById("id_cantidad");
+    const monto = document.getElementById("id_monto");
+    const tipo = document.getElementById("id_tipo");
+    if (!producto || !cantidad || !monto) return;
+    const precios = {{ precios_productos|safe }};
+    function calcular() {
+      const precio = precios[producto.value];
+      if (!precio) return;
+      if (!cantidad.value) cantidad.value = 1;
+      monto.value = precio * parseInt(cantidad.value, 10);
+      if (tipo && tipo.value !== "ingreso") { tipo.value = "ingreso"; tipo.dispatchEvent(new Event("change")); }
+    }
+    producto.addEventListener("change", calcular);
+    cantidad.addEventListener("input", calcular);
   })();
 </script>
 {% endblock %}

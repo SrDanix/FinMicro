@@ -3,7 +3,14 @@
 {% block titulo_pagina %}Movimientos{% endblock %}
 
 {% block acciones_barra %}
-{% if puede_editar %}<a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>{% endif %}
+<div style="display:flex; gap:8px; flex-wrap:wrap;">
+  <a href="{% url 'finances:exportar_movimientos' %}?{{ filtros }}{% if filtros %}&{% endif %}formato=xlsx" class="btn btn-secundario">Exportar a Excel</a>
+  <a href="{% url 'finances:exportar_movimientos' %}?{{ filtros }}{% if filtros %}&{% endif %}formato=csv" class="btn btn-fantasma">CSV</a>
+  {% if puede_editar %}
+  <a href="{% url 'finances:importar_movimientos' %}" class="btn btn-secundario">Importar</a>
+  <a href="{% url 'finances:crear_movimiento' %}" class="btn btn-primario">+ Nuevo movimiento</a>
+  {% endif %}
+</div>
 {% endblock %}
 
 {% block contenido %}

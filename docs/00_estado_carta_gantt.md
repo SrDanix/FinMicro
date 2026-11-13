@@ -1,4 +1,15 @@
-# Estado del proyecto frente a la carta Gantt — semana 10
+# Estado del proyecto frente a la carta Gantt
+
+> **Actualización 13-11-2026 (semana 14 TIHI84).** Los 123 puntos que faltaban (RF-10 a RF-38)
+> quedaron implementados con pruebas automatizadas (140 pruebas, cobertura 90 %) y esperan la
+> revisión de otro integrante para contar como *Hecho* ([resumen](01_requerimientos_funcionales.md#resumen)).
+> Infraestructura y calidad (PostgreSQL, migración, respaldos, CI ampliada, carga y accesibilidad):
+> [19_operacion.md](19_operacion.md). Despliegue en EC2 hasta el paso 11: [18_despliegue_aws_academy.md](18_despliegue_aws_academy.md).
+> El detalle actividad por actividad está en la carta Gantt de avance real (planilla del equipo).
+> Lo que sigue requiriendo personas: aprobación del backlog y acta del Sprint 1, firmas de cesión de
+> derechos, validación contable, pruebas con usuarios, dominio y HTTPS, e informe final.
+
+## Situación a la semana 10
 
 Cubre las 32 actividades que comienzan entre las semanas 1 y 10.
 

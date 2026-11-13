@@ -11,3 +11,5 @@ demo_cuenta.txt
 .vscode/
 .idea/
 .claude/
+respaldos/
+.coverage

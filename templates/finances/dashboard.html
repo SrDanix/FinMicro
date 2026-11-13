@@ -7,6 +7,24 @@
 {% endblock %}
 
 {% block contenido %}
+{% if alertas %}
+<div class="tarjeta mt-0" style="margin-bottom:20px;">
+  <div class="tarjeta-titulo flex-entre">
+    <h3>Alertas</h3>
+    <a href="{% url 'core:alertas' %}" class="btn btn-fantasma btn-chico">Ver todas</a>
+  </div>
+  {% for alerta in alertas %}
+  <div class="aviso {% if alerta.severidad == 'urgente' %}aviso-error{% elif alerta.severidad == 'aviso' %}aviso-alerta{% else %}aviso-info{% endif %} flex-entre" style="gap:12px;">
+    <span>{{ alerta.mensaje }}{% if alerta.enlace %} <a href="{{ alerta.enlace }}">Ver</a>{% endif %}</span>
+    <form method="post" action="{% url 'core:marcar_alerta_leida' alerta.pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="siguiente" value="{{ request.path }}">
+      <button type="submit" class="btn btn-fantasma btn-chico" aria-label="Marcar como leída: {{ alerta.mensaje }}">Entendido</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 {% if cerca_del_limite %}
 <div class="aviso aviso-alerta">
   Llevas {{ movimientos_del_mes }} de {{ plan.limite_movimientos_mensuales }} movimientos este mes.
@@ -38,6 +56,18 @@
   <div class="barra-progreso" role="progressbar" aria-valuenow="{{ avance_meta }}" aria-valuemin="0" aria-valuemax="100">
     <div style="width: {{ avance_meta }}%;"></div>
   </div>
+</div>
+{% endif %}
+
+{% if recomendaciones %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo flex-entre">
+    <h3>Recomendaciones</h3>
+    <a href="{% url 'finances:indicadores' %}" class="btn btn-fantasma btn-chico">Ver indicadores</a>
+  </div>
+  <ul class="mt-0" style="padding-left:20px; margin-bottom:0;">
+    {% for r in recomendaciones %}<li style="margin-bottom:6px;">{{ r.mensaje }}</li>{% endfor %}
+  </ul>
 </div>
 {% endif %}
 

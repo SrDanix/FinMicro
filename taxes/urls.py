@@ -7,4 +7,5 @@ app_name = "taxes"
 
 urlpatterns = [
     path("", views.calculadora, name="calculadora"),
+    path("calendario/", views.calendario, name="calendario"),
 ]

@@ -12,6 +12,7 @@ Referencia en el informe: Sección I (perfil objetivo = "microempresario
 informal") y Sección III (FODA / PESTEL: plataforma "adaptada al
 microempresario informal").
 """
+import hashlib
 import re
 import uuid
 
@@ -19,6 +20,7 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 _RUT_FORMATO = re.compile(r"^(\d{7,8})-([\dK])$")
 
@@ -102,6 +104,13 @@ class Usuario(AbstractUser):
         blank=True,
         help_text="Opcional. Se muestra tu avance en el panel.",
     )
+    # RF-16: dinero disponible al empezar a usar FinMicro. El saldo inicial de
+    # cada mes es este monto más todo lo registrado en los meses anteriores.
+    saldo_caja_inicial = models.IntegerField(
+        "Caja al empezar a usar FinMicro (CLP)",
+        default=0,
+        help_text="Lo que tenías en caja y cuenta del negocio antes de tu primer registro.",
+    )
     fecha_registro = models.DateTimeField("Fecha de registro", auto_now_add=True)
 
     REQUIRED_FIELDS = ["email", "rut", "nombre_negocio"]
@@ -171,3 +180,51 @@ class Colaboracion(models.Model):
 
     def __str__(self):
         return f"{self.email} en {self.propietario.nombre_negocio} ({self.get_rol_display()})"
+
+
+class DocumentoLegal(models.Model):
+    """RF-29: términos y condiciones y política de privacidad, versionados.
+
+    El contenido no se edita después de publicado: para cambiarlo se crea
+    una versión nueva, y la huella SHA-256 permite probar qué texto exacto
+    aceptó cada usuario.
+    """
+
+    class Tipo(models.TextChoices):
+        TERMINOS = "terminos", "Términos y condiciones"
+        PRIVACIDAD = "privacidad", "Política de privacidad"
+
+    tipo = models.CharField(max_length=12, choices=Tipo.choices)
+    version = models.CharField(max_length=10)
+    contenido = models.TextField()
+    huella = models.CharField("Huella SHA-256", max_length=64, editable=False)
+    vigente_desde = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = "Documento legal"
+        verbose_name_plural = "Documentos legales"
+        ordering = ["tipo", "-vigente_desde"]
+        constraints = [models.UniqueConstraint(fields=["tipo", "version"], name="documento_version_unica")]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} v{self.version}"
+
+    def save(self, *args, **kwargs):
+        self.huella = hashlib.sha256(self.contenido.encode("utf-8")).hexdigest()
+        super().save(*args, **kwargs)
+
+
+class Consentimiento(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="consentimientos")
+    documento = models.ForeignKey(DocumentoLegal, on_delete=models.PROTECT, related_name="aceptaciones")
+    aceptado_en = models.DateTimeField(auto_now_add=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Consentimiento"
+        verbose_name_plural = "Consentimientos"
+        ordering = ["-aceptado_en"]
+        constraints = [models.UniqueConstraint(fields=["usuario", "documento"], name="consentimiento_unico")]
+
+    def __str__(self):
+        return f"{self.usuario} aceptó {self.documento} el {self.aceptado_en:%d-%m-%Y}"

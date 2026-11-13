@@ -90,6 +90,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # request.negocio / request.rol_negocio (colaboradores, ver accounts/negocio.py)
     'accounts.negocio.NegocioActivoMiddleware',
+    # RF-29: pide aceptar los términos vigentes antes de seguir (accounts/legal.py)
+    'accounts.legal.ConsentimientoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -149,6 +151,14 @@ if os.environ.get("DB_ENGINE") == "postgresql":
             "PASSWORD": os.environ.get("DB_PASSWORD", ""),
             "HOST": os.environ.get("DB_HOST", "localhost"),
             "PORT": os.environ.get("DB_PORT", "5432"),
+            # Reutiliza la conexión 60 s en vez de abrir una por petición,
+            # y verifica que siga viva antes de usarla (RDS puede cortarla).
+            "CONN_MAX_AGE": int(os.environ.get("DB_CONN_MAX_AGE", "60")),
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                # En AWS RDS usar "require": la conexión viaja cifrada.
+                "sslmode": os.environ.get("DB_SSLMODE", "prefer"),
+            },
         }
     }
 else:
@@ -215,7 +225,7 @@ CACHES = {
 }
  
 # --- Mensajes (alineado con las clases CSS de static/css/styles.css) -----
-from django.contrib.messages import constants as message_constants
+from django.contrib.messages import constants as message_constants  # noqa: E402
  
 MESSAGE_TAGS = {
     message_constants.DEBUG: "aviso-debug",
@@ -234,3 +244,8 @@ KHIPU_API_KEY = os.environ.get("KHIPU_API_KEY", "")
 FLOW_API_KEY = os.environ.get("FLOW_API_KEY", "")
 FLOW_SECRET_KEY = os.environ.get("FLOW_SECRET_KEY", "")
 FLOW_API_URL = os.environ.get("FLOW_API_URL", "https://sandbox.flow.cl/api")
+
+# --- Asistente financiero (RF-37, core/asistente.py) ---
+# Sin clave el asistente queda apagado y la pantalla lo informa.
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ASISTENTE_PREGUNTAS_POR_DIA = int(os.environ.get("ASISTENTE_PREGUNTAS_POR_DIA", "20"))

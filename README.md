@@ -2,11 +2,13 @@
 
 Plataforma web (Django) de gestión financiera para microempresarios chilenos:
 
-- **Finanzas**: registro de ingresos y gastos por categoría, panel con balance del mes y gráfico de 6 meses.
-- **Impuestos**: calculadora de IVA (19%) y retención de boletas de honorarios (tasas Ley 21.133).
-- **Proyecciones**: proyección de ingresos a 3 meses por tendencia lineal.
-- **Evaluador de viabilidad** (Premium): VAN, TIR, payback y beneficio/costo.
-- **Suscripciones**: Plan Básico gratis y Premium, con pago simulado (Khipu / Flow.cl) hasta configurar credenciales reales.
+- **Finanzas**: ingresos y gastos por categoría, búsqueda, catálogo de productos, importación y exportación Excel/CSV, panel con balance, alertas y recomendaciones.
+- **Indicadores**: margen bruto, punto de equilibrio, ticket promedio, gastos fijos y variables, flujo de caja real versus proyectado y reporte mensual en PDF.
+- **Impuestos**: IVA del mes calculado con los movimientos, calculadora de IVA y honorarios con tasas editables, y calendario de vencimientos F29/F22.
+- **Proyecciones**: ingresos a 3 meses por tendencia lineal y escenarios optimista, base y pesimista.
+- **Premium**: evaluador de viabilidad (VAN, TIR, payback, beneficio/costo) y asistente financiero en lenguaje natural.
+- **Suscripciones**: Plan Básico gratis y Premium mensual con Khipu o Flow.cl (pagos verificados con la pasarela; simulados hasta configurar credenciales), renovación y vencimiento.
+- **Cumplimiento**: consentimiento versionado de términos y privacidad, descarga y eliminación de datos (Ley 19.628) y registro de auditoría.
 
 ## Cómo ejecutarlo
 
@@ -32,7 +34,9 @@ Requiere [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 docker compose up --build
 ```
 
-Abre http://localhost:8000. Los datos quedan en el volumen `finmicro_datos`.
+Abre http://localhost:8000. Levanta la app y un PostgreSQL 17 (igual que producción);
+los datos quedan en el volumen `finmicro_postgres`. Para AWS RDS, ver
+[docs/17_base_de_datos_aws.md](docs/17_base_de_datos_aws.md).
 Para detenerlo: `Ctrl+C` o `docker compose down`.
 
 ## Documentación del proyecto
@@ -40,7 +44,8 @@ Para detenerlo: `Ctrl+C` o `docker compose down`.
 Toda la documentación de análisis, diseño y seguimiento está en [`docs/`](docs/).
 Comienza por el [estado frente a la carta Gantt](docs/00_estado_carta_gantt.md).
 Para publicarlo en AWS Academy (EC2 + Docker + Nginx), sigue la
-[guía de despliegue paso a paso](docs/18_despliegue_aws_academy.md).
+[guía de despliegue paso a paso](docs/18_despliegue_aws_academy.md). Respaldos, tareas
+programadas, migración a PostgreSQL y pruebas de calidad: [operación](docs/19_operacion.md).
 Para contribuir, lee [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Usuarios de prueba

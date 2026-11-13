@@ -8,15 +8,25 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
+from core.auditoria import Accion, registrar
 from subscriptions.services import asegurar_plan_basico
-from .forms import ConfiguracionForm, EliminarCuentaForm, InvitacionForm, PerfilForm, RegistroForm
-from .models import Colaboracion
+from .forms import (
+    AceptarTerminosForm,
+    ConfiguracionForm,
+    EliminarCuentaForm,
+    InvitacionForm,
+    PerfilForm,
+    RegistroForm,
+)
+from .legal import documentos_vigentes, pendientes, registrar_aceptacion
+from .models import Colaboracion, DocumentoLegal
 from .negocio import SESION_NEGOCIO, negocios_disponibles
 
 
@@ -36,6 +46,7 @@ def registro(request):
             usuario = form.save()
             asegurar_plan_basico(usuario)
             login(request, usuario)
+            registrar_aceptacion(usuario, request)
             messages.success(
                 request,
                 f"¡Bienvenido a FinMicro, {usuario.nombre_negocio}! Tu cuenta quedó activa en el Plan Básico.",
@@ -98,6 +109,7 @@ def colaboradores(request):
                 [invitacion.email],
                 fail_silently=True,
             )
+            registrar(Accion.COLABORADOR, request=request, detalle=f"Invitó a {invitacion.email} como {invitacion.rol}")
             messages.success(request, f"Invitación creada para {invitacion.email}.")
             return redirect("accounts:colaboradores")
     else:
@@ -122,6 +134,7 @@ def colaboradores(request):
 def revocar_colaborador(request, pk):
     colaboracion = get_object_or_404(Colaboracion, pk=pk, propietario=request.user)
     colaboracion.delete()
+    registrar(Accion.COLABORADOR, request=request, detalle=f"Quitó el acceso de {colaboracion.email}")
     messages.success(request, f"Se quitó el acceso de {colaboracion.email}.")
     return redirect("accounts:colaboradores")
 
@@ -131,6 +144,7 @@ def revocar_colaborador(request, pk):
 def abandonar_negocio(request, pk):
     colaboracion = get_object_or_404(Colaboracion, pk=pk, colaborador=request.user)
     colaboracion.delete()
+    registrar(Accion.COLABORADOR, request=request, detalle=f"Dejó de colaborar en {colaboracion.propietario.nombre_negocio}")
     messages.success(request, f"Ya no colaboras en {colaboracion.propietario.nombre_negocio}.")
     return redirect("accounts:colaboradores")
 
@@ -147,6 +161,7 @@ def aceptar_invitacion(request, token):
             invitacion.colaborador = request.user
             invitacion.estado = Colaboracion.Estado.ACEPTADA
             invitacion.save(update_fields=["colaborador", "estado"])
+            registrar(Accion.COLABORADOR, request=request, detalle=f"Aceptó colaborar en {invitacion.propietario.nombre_negocio}")
         request.session[SESION_NEGOCIO] = invitacion.propietario_id
         messages.success(request, f"Ahora colaboras en {invitacion.propietario.nombre_negocio}.")
         return redirect("finances:dashboard")
@@ -196,9 +211,11 @@ def exportar_datos(request):
             "meta_ventas_mensual": u.meta_ventas_mensual,
             "fecha_registro": u.fecha_registro,
         },
-        "categorias_propias": list(u.categorias.values("nombre", "tipo", "es_gravable_iva")),
+        "categorias_propias": list(u.categorias.values("nombre", "tipo", "naturaleza", "es_gravable_iva")),
         "movimientos": list(
-            u.movimientos.values("fecha", "tipo", "categoria__nombre", "monto", "descripcion")
+            u.movimientos.values(
+                "fecha", "tipo", "categoria__nombre", "producto__nombre", "cantidad", "monto", "descripcion"
+            )
         ),
         "suscripciones": list(
             u.suscripciones.values("plan__nombre", "estado", "metodo_pago", "fecha_inicio", "fecha_fin")
@@ -206,7 +223,13 @@ def exportar_datos(request):
         "colaboradores_invitados": list(
             u.colaboraciones_otorgadas.values("email", "rol", "estado")
         ),
+        "productos": list(u.productos.values("nombre", "precio", "afecto_iva", "activo")),
+        "consentimientos": list(
+            u.consentimientos.values("documento__tipo", "documento__version", "documento__huella", "aceptado_en")
+        ),
+        "consultas_asistente": list(u.consultas_asistente.values("pregunta", "respuesta", "creada_en")),
     }
+    registrar(Accion.EXPORTAR_DATOS, request=request)
     respuesta = HttpResponse(
         json.dumps(datos, cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
         content_type="application/json; charset=utf-8",
@@ -223,6 +246,7 @@ def eliminar_cuenta(request):
         form = EliminarCuentaForm(request.POST, usuario=request.user)
         if form.is_valid():
             usuario = request.user
+            registrar(Accion.ELIMINAR_CUENTA, request=request, detalle=f"RUT {usuario.rut}")
             with transaction.atomic():
                 # Movimiento.categoria es PROTECT: se borran antes que las categorías.
                 usuario.movimientos.all().delete()
@@ -233,3 +257,34 @@ def eliminar_cuenta(request):
     else:
         form = EliminarCuentaForm(usuario=request.user)
     return render(request, "accounts/eliminar_cuenta.html", {"form": form})
+
+
+# --- Consentimiento, Ley 19.628 (RF-29) --------------------------------------
+
+
+def documento_legal(request, tipo):
+    """Página pública con la versión vigente de un documento legal."""
+    if tipo not in DocumentoLegal.Tipo.values:
+        raise Http404
+    documento = next((d for d in documentos_vigentes() if d.tipo == tipo), None)
+    if documento is None:
+        raise Http404
+    return render(request, "accounts/documento_legal.html", {"documento": documento})
+
+
+@login_required
+def aceptar_terminos(request):
+    por_aceptar = pendientes(request.user)
+    siguiente = request.GET.get("next") or request.POST.get("next") or ""
+    if not url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
+        siguiente = reverse("finances:dashboard")
+    if not por_aceptar:
+        return redirect(siguiente)
+    form = AceptarTerminosForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        registrar_aceptacion(request.user, request)
+        messages.success(request, "Gracias. Registramos tu aceptación.")
+        return redirect(siguiente)
+    return render(
+        request, "accounts/aceptar_terminos.html", {"form": form, "documentos": por_aceptar, "next": siguiente}
+    )

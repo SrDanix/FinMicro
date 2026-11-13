@@ -42,7 +42,7 @@ class EvaluadorViabilidadForm(forms.Form):
             try:
                 flujos.append(Decimal(linea))
             except InvalidOperation:
-                raise forms.ValidationError(f"La línea {numero_linea} ('{linea}') no es un monto válido.")
+                raise forms.ValidationError(f"La línea {numero_linea} ('{linea}') no es un monto válido.") from None
         if len(flujos) < 1:
             raise forms.ValidationError("Ingresa al menos un período de flujo esperado.")
         return flujos

@@ -22,3 +22,16 @@
 | RN-16 | Eliminar la cuenta borra de forma permanente perfil, movimientos, categorías propias, suscripciones y colaboraciones, previa confirmación con contraseña. | `accounts.views.eliminar_cuenta` |
 | RN-17 | Un cambio de plan solo ocurre por POST y tras una pantalla de confirmación. | `subscriptions.views.suscribirse` |
 | RN-18 | Mientras no existan credenciales de pasarela, los pagos se simulan y así se indica en pantalla. | `subscriptions.services`, `PAGOS_MODO_SIMULADO` |
+| RN-19 | Una venta puede registrarse desde el catálogo: el monto es precio × cantidad si no se ingresa otro. Solo los ingresos llevan producto. | `MovimientoForm.clean`, `Movimiento.clean` |
+| RN-20 | La importación es todo o nada: si una fila tiene error o se supera el límite del plan (RN-05) no se importa ninguna. Las filas ya registradas se omiten. Montos en pesos enteros, sin fechas futuras, máximo 1.000 filas y 2 MB. | `finances.importacion`, `finances.views.confirmar_importacion` |
+| RN-21 | Costo de ventas = gastos variables del mes. Margen bruto = ventas − costo de ventas. Punto de equilibrio = costos fijos ÷ (1 − gastos variables ÷ ventas); no existe si no hay ventas o si los variables las igualan. | `finances.services` |
+| RN-22 | Saldo inicial de caja de un mes = caja declarada al empezar + todo lo registrado en los meses anteriores. | `finances.services.flujo_de_caja` |
+| RN-23 | IVA automático: los montos registrados incluyen IVA; generan débito o crédito solo las categorías y productos afectos; se redondea una vez por período; el remanente se arrastra hasta 12 meses sin reajuste. *A validar con la asesoría contable (X-12).* | `taxes.services.iva_del_mes` |
+| RN-24 | La tasa aplicable a una fecha es la de inicio más reciente que la cubre; si la tabla no tiene una, se usa la tasa legal del código. | `taxes.services.tasa_vigente` |
+| RN-25 | F29 vence el día 12 del mes siguiente (el 20 si está afecto a IVA y emite documentos electrónicos); F22 el 30 de abril. Un vencimiento en fin de semana o feriado se corre al día hábil siguiente. Sin inicio de actividades no hay vencimientos. | `taxes.calendario` |
+| RN-26 | Alertas: vencimiento a 7 días o menos; plan al 80 % y al 100 %; gasto mayor al doble de la mediana de la categoría (con al menos 3 gastos previos). Una misma situación genera una sola alerta. | `core.alertas` |
+| RN-27 | Un plan pagado se activa solo si la pasarela confirma el pago al consultarla y la orden y el monto coinciden. Un aviso repetido no cambia nada. | `subscriptions.services.procesar_notificacion` |
+| RN-28 | Premium dura un mes; renovar suma el mes al final del período vigente. Se avisa 3 días antes; al vencer hay 3 días de gracia y luego vuelve al Plan Básico, sin perder datos. | `subscriptions.services`, `renovar_suscripciones` |
+| RN-29 | Para usar la app hay que aceptar la versión vigente de los términos y de la política de privacidad; un documento publicado no se modifica. | `accounts.legal`, `DocumentoLegalAdmin` |
+| RN-30 | El registro de auditoría solo se agrega: nadie lo edita ni lo borra desde la app o el administrador. | `core.auditoria`, `RegistroAuditoriaAdmin` |
+| RN-31 | El asistente es exclusivo del Plan Premium, solo recibe datos del negocio activo y tiene un tope diario de preguntas. | `core.asistente` |
