@@ -163,6 +163,12 @@
 
 {% endif %}
 
+<script>
+  // WCAG 2.1.1: una tabla que se desplaza en celular debe poder recorrerse con el teclado.
+  document.querySelectorAll(".tabla-envoltorio").forEach(function (e) {
+    if (e.scrollWidth > e.clientWidth) { e.tabIndex = 0; e.setAttribute("role", "region"); e.setAttribute("aria-label", "Tabla desplazable"); }
+  });
+</script>
 {% block scripts_extra %}{% endblock %}
 </body>
 </html>

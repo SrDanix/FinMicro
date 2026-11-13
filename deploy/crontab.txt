@@ -1,0 +1,15 @@
+# Tareas programadas de FinMicro en la EC2 (ver docs/19_operacion.md).
+# Instalar como root:  sudo crontab deploy/crontab.txt   (revisar antes la ruta del proyecto)
+# Horario del servidor: UTC. 10:00 UTC = 07:00 en Chile continental (horario de verano).
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+FINMICRO=/home/ubuntu/FinMicro
+
+# X-08: respaldo diario de la base (03:15 UTC)
+15 3 * * * cd $FINMICRO && bash deploy/respaldar.sh >> /var/log/finmicro-respaldo.log 2>&1
+# X-08: prueba de restauración el día 1 de cada mes (04:00 UTC)
+0 4 1 * * cd $FINMICRO && bash deploy/probar_restauracion.sh >> /var/log/finmicro-respaldo.log 2>&1
+# RF-24: alertas de vencimientos tributarios (10:00 UTC)
+0 10 * * * cd $FINMICRO && docker compose -f docker-compose.prod.yml exec -T web python manage.py generar_alertas >> /var/log/finmicro-tareas.log 2>&1
+# RF-28: renovación y vencimiento de suscripciones (10:10 UTC)
+10 10 * * * cd $FINMICRO && docker compose -f docker-compose.prod.yml exec -T web python manage.py renovar_suscripciones >> /var/log/finmicro-tareas.log 2>&1

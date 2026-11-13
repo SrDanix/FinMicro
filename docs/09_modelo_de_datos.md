@@ -100,14 +100,21 @@ erDiagram
 - **`Movimiento.tipo` se duplica desde la categoría** para filtrar sin JOIN; la consistencia se garantiza en `clean()` (RN-07).
 - **Montos en `DECIMAL`**, nunca en coma flotante.
 
-## Entidades propuestas para sprints futuros
+## Entidades agregadas en los sprints 2 a 6 (noviembre 2026)
 
-| Sprint | Entidad | Campos principales |
-|---|---|---|
-| 2 | `Producto` | negocio, nombre, precio, afecto_iva, activo |
-| 2 | `Movimiento` + | producto (FK opcional), cantidad |
-| 3 | `Categoria` + | naturaleza (fijo / variable) |
-| 4 | `TasaTributaria` | impuesto, año, tasa, vigente_desde |
-| 4 | `Alerta` | negocio, tipo, mensaje, fecha, leída |
-| 5 | `Consentimiento` | usuario, documento, versión, fecha, IP |
-| 5 | `RegistroAuditoria` | usuario, acción, objeto, fecha, IP |
+| Sprint / RF | Entidad o campo | Campos principales | Restricciones |
+|---|---|---|---|
+| S2 · RF-11 | `Producto` | usuario (negocio), nombre, precio, afecto_iva, activo | único (usuario, nombre) |
+| S2 · RF-11 | `Movimiento` + | producto (FK opcional, `SET_NULL`), cantidad | solo ingresos llevan producto (RN-19) |
+| S3 · RF-16 | `Usuario` + | saldo_caja_inicial | entero, por defecto 0 |
+| S3 · RF-19 | `Categoria` + | naturaleza (`fijo` / `variable` / vacío) | vacío en categorías de ingreso |
+| S4 · RF-25 | `TasaTributaria` | codigo (IVA, RET_HON), valor, vigente_desde, vigente_hasta, fuente | único (codigo, vigente_desde) |
+| S4 · RF-23 | `Feriado` | fecha, nombre | fecha única |
+| S4 · RF-24 | `Alerta` (app `core`) | negocio, codigo, severidad, mensaje, enlace, leida | único (negocio, codigo) |
+| S5 · RF-29 | `DocumentoLegal` | tipo, version, contenido, huella SHA-256, vigente_desde | único (tipo, version); no editable |
+| S5 · RF-29 | `Consentimiento` | usuario, documento (`PROTECT`), aceptado_en, ip | único (usuario, documento) |
+| S5 · RF-32 | `RegistroAuditoria` (app `core`) | usuario (`SET_NULL`), nombre_usuario, accion, detalle, ip, creado_en | solo se agrega (RN-30) |
+| S6 · RF-37 | `ConsultaAsistente` (app `core`) | negocio, pregunta, respuesta, creada_en | se borra con la cuenta |
+
+Cargas iniciales por migración: categorías del sistema con su naturaleza (`finances` 0004), tasas y
+feriados 2026–2027 (`taxes` 0002) y la versión 1.0 de los documentos legales (`accounts` 0005).

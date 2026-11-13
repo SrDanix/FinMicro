@@ -79,7 +79,8 @@
     {% if flujo.proyectado is not None %}
       <div class="flex-entre" style="margin-top:16px;"><span class="texto-tenue">Entradas proyectadas</span><span class="cifra">${{ flujo.proyectado|floatformat:"0g" }}</span></div>
       <p class="texto-ayuda">
-        Vendiste ${{ flujo.diferencia_absoluta|floatformat:"0g" }} {% if flujo.diferencia_con_proyeccion >= 0 %}más{% else %}menos{% endif %} de lo proyectado.
+        {% if not flujo.diferencia_con_proyeccion %}Vendiste lo mismo que lo proyectado.
+        {% else %}Vendiste ${{ flujo.diferencia_absoluta|floatformat:"0g" }} {% if flujo.diferencia_con_proyeccion > 0 %}más{% else %}menos{% endif %} de lo proyectado.{% endif %}
       </p>
     {% else %}
       <p class="texto-ayuda">La comparación con lo proyectado aparece cuando hay ingresos en al menos 2 de los 6 meses anteriores.</p>

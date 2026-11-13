@@ -84,6 +84,8 @@ h3 { font-size: 1.1rem; }
 p { margin: 0 0 1em; color: var(--tinta-suave); }
 a { color: var(--verde-700); text-decoration: none; }
 a:hover { text-decoration: underline; }
+/* WCAG 1.4.1: un enlace dentro de un texto no puede distinguirse solo por el color. */
+p a:not(.btn), li a:not(.btn), td a:not(.btn), .aviso a:not(.btn) { text-decoration: underline; text-underline-offset: 2px; }
 small { color: var(--tinta-suave); }
 
 .cifra, .tabla td.col-monto, .tabla th.col-monto {
@@ -236,6 +238,8 @@ main.contenedor.ancho-completo { max-width: none; }
 .grid-2 { grid-template-columns: repeat(2, 1fr); }
 .grid-3 { grid-template-columns: repeat(3, 1fr); }
 @media (max-width: 860px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+/* Sin esto, una tabla ancha agranda la columna en vez de desplazarse dentro de .tabla-envoltorio. */
+.grid > * { min-width: 0; }
 
 /* Tarjeta "boleta": firma visual del producto — borde inferior perforado,
    como el talón de una boleta física. */
@@ -440,7 +444,8 @@ input[type="number"], input[type="date"], select, textarea {
     width: 38px; height: 38px; border-radius: var(--radio-s);
     background: var(--superficie); border: 1px solid var(--borde-fuerte); color: var(--tinta);
   }
-  .barra-superior { padding: 14px 16px; }
+  .barra-superior { padding: 14px 16px; flex-wrap: wrap; }
+  .barra-superior > form, .barra-superior > div { flex-wrap: wrap; }
   main.contenedor { padding: 18px 16px 40px; }
   .mensajes { padding: 0 16px; }
   .hero { padding: 28px 20px; }
