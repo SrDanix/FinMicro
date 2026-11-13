@@ -185,3 +185,20 @@ class CalendarioTributarioTests(TestCase):
         respuesta = self.client.get(reverse("taxes:calendario"))
         self.assertContains(respuesta, "F29")
         self.assertContains(respuesta, "F22")
+
+
+class PlanillaValidacionContableTests(TestCase):
+    def test_genera_la_planilla_con_los_calculos_actuales(self):
+        import tempfile
+        from io import StringIO
+
+        from django.core.management import call_command
+        from openpyxl import load_workbook
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            ruta = f"{carpeta}/casos.xlsx"
+            call_command("generar_casos_validacion", ruta, stdout=StringIO())
+            libro = load_workbook(ruta)
+        self.assertEqual(libro.sheetnames, ["IVA automático", "Honorarios", "Calendario", "Tasas", "Indicadores"])
+        self.assertEqual(libro["Honorarios"]["G4"].value, 152500)     # $1.000.000 en 2026
+        self.assertEqual(libro["IVA automático"]["J5"].value, 95000)  # IVA-02
