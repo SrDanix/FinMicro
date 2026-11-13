@@ -64,6 +64,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.legal import registrar_aceptacion
 from accounts.models import Usuario
 from finances.models import Categoria, Movimiento, Producto
 from subscriptions.services import asegurar_plan_basico
@@ -81,6 +82,7 @@ def _usuario(username="almacen", rut="11111111-1", **extra):
         nombre_negocio="Almacén", **extra,
     )
     asegurar_plan_basico(usuario)
+    registrar_aceptacion(usuario)
     return usuario
 
 

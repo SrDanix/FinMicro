@@ -8,16 +8,25 @@ from django.contrib.auth.decorators import login_required
 from django.core.mail import send_mail
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from core.auditoria import Accion, registrar
 from subscriptions.services import asegurar_plan_basico
-from .forms import ConfiguracionForm, EliminarCuentaForm, InvitacionForm, PerfilForm, RegistroForm
-from .models import Colaboracion
+from .forms import (
+    AceptarTerminosForm,
+    ConfiguracionForm,
+    EliminarCuentaForm,
+    InvitacionForm,
+    PerfilForm,
+    RegistroForm,
+)
+from .legal import documentos_vigentes, pendientes, registrar_aceptacion
+from .models import Colaboracion, DocumentoLegal
 from .negocio import SESION_NEGOCIO, negocios_disponibles
 
 
@@ -37,6 +46,7 @@ def registro(request):
             usuario = form.save()
             asegurar_plan_basico(usuario)
             login(request, usuario)
+            registrar_aceptacion(usuario, request)
             messages.success(
                 request,
                 f"¡Bienvenido a FinMicro, {usuario.nombre_negocio}! Tu cuenta quedó activa en el Plan Básico.",
@@ -240,3 +250,34 @@ def eliminar_cuenta(request):
     else:
         form = EliminarCuentaForm(usuario=request.user)
     return render(request, "accounts/eliminar_cuenta.html", {"form": form})
+
+
+# --- Consentimiento, Ley 19.628 (RF-29) --------------------------------------
+
+
+def documento_legal(request, tipo):
+    """Página pública con la versión vigente de un documento legal."""
+    if tipo not in DocumentoLegal.Tipo.values:
+        raise Http404
+    documento = next((d for d in documentos_vigentes() if d.tipo == tipo), None)
+    if documento is None:
+        raise Http404
+    return render(request, "accounts/documento_legal.html", {"documento": documento})
+
+
+@login_required
+def aceptar_terminos(request):
+    por_aceptar = pendientes(request.user)
+    siguiente = request.GET.get("next") or request.POST.get("next") or ""
+    if not url_has_allowed_host_and_scheme(siguiente, allowed_hosts={request.get_host()}):
+        siguiente = reverse("finances:dashboard")
+    if not por_aceptar:
+        return redirect(siguiente)
+    form = AceptarTerminosForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        registrar_aceptacion(request.user, request)
+        messages.success(request, "Gracias. Registramos tu aceptación.")
+        return redirect(siguiente)
+    return render(
+        request, "accounts/aceptar_terminos.html", {"form": form, "documentos": por_aceptar, "next": siguiente}
+    )

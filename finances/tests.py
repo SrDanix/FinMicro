@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import Colaboracion, Usuario
+from accounts.legal import registrar_aceptacion
 from accounts.negocio import SESION_NEGOCIO
 from subscriptions.services import asegurar_plan_basico
 
@@ -32,6 +33,7 @@ def crear_usuario(username, rut, **extra):
         nombre_negocio=f"Negocio {username}", **extra,
     )
     asegurar_plan_basico(usuario)
+    registrar_aceptacion(usuario)
     return usuario
 
 

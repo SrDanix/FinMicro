@@ -1,0 +1,5 @@
+<article class="tarjeta" style="max-width:760px;">
+  <p class="texto-tenue mt-0">Versión {{ documento.version }} · vigente desde el {{ documento.vigente_desde|date:"d/m/Y" }}</p>
+  <div style="white-space:pre-line; line-height:1.6;">{{ documento.contenido }}</div>
+  <p class="texto-ayuda">Huella SHA-256: <code style="word-break:break-all;">{{ documento.huella }}</code></p>
+</article>

@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ documento.get_tipo_display }}{% endblock %}
+{% block titulo_pagina %}{{ documento.get_tipo_display }}{% endblock %}
+
+{% block contenido %}{% include "accounts/_documento_legal.html" %}{% endblock %}
+
+{% block contenido_publico %}
+<section style="max-width: 760px; margin: 32px auto 64px; padding: 0 20px;">
+  {% include "accounts/_documento_legal.html" %}
+</section>
+{% endblock %}

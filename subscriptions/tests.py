@@ -12,6 +12,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from accounts.legal import registrar_aceptacion
 from accounts.models import Usuario
 from core.models import Alerta, RegistroAuditoria
 
@@ -56,6 +57,7 @@ class PagosTests(TestCase):
             username="cliente", email="cliente@example.com", password=CLAVE, rut="11111111-1", nombre_negocio="Tienda"
         )
         asegurar_plan_basico(self.usuario)
+        registrar_aceptacion(self.usuario)
         self.premium = asegurar_plan_premium()
         self.client.login(username="cliente", password=CLAVE)
 

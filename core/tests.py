@@ -20,6 +20,7 @@ class RecorridoCompletoTests(TestCase):
                 "tipo_negocio": "FL",
                 "password1": "UnaClaveSegura.2026",
                 "password2": "UnaClaveSegura.2026",
+                "acepta_terminos": "on",
             },
         )
         self.assertRedirects(respuesta, reverse("finances:dashboard"))
@@ -104,6 +105,7 @@ from decimal import Decimal
 from django.core import mail
 from django.core.management import call_command
 
+from accounts.legal import registrar_aceptacion
 from accounts.models import Usuario
 from subscriptions.services import asegurar_plan_basico
 from taxes.calendario import Obligacion
@@ -142,6 +144,7 @@ class AlertasIntegracionTests(TestCase):
             rut="11111111-1", nombre_negocio="Taller", regimen_tributario="PP", afecto_iva=True,
         )
         asegurar_plan_basico(self.usuario)
+        registrar_aceptacion(self.usuario)
         self.client.login(username="taller", password="UnaClaveSegura.2026")
         self.transporte = Categoria.objects.get(nombre="Transporte", usuario=None)
 
@@ -168,6 +171,7 @@ class AlertasIntegracionTests(TestCase):
         alerta = Alerta.objects.create(negocio=self.usuario, codigo="X", mensaje="Privada")
         otro = Usuario.objects.create_user(username="otro", email="o@example.com", password="UnaClaveSegura.2026",
                                            rut="22222222-2", nombre_negocio="Otro")
+        registrar_aceptacion(otro)
         self.client.login(username="otro", password="UnaClaveSegura.2026")
         self.assertNotContains(self.client.get(reverse("core:alertas")), "Privada")
         self.assertEqual(self.client.post(reverse("core:marcar_alerta_leida", args=[alerta.pk])).status_code, 404)
@@ -196,13 +200,15 @@ class AuditoriaTests(TestCase):
             rut="11111111-1", nombre_negocio="Tienda",
         )
         asegurar_plan_basico(self.usuario)
+        registrar_aceptacion(self.usuario)
 
     def test_registra_inicio_fallo_y_cierre_de_sesion_sin_guardar_claves(self):
         self.client.post(reverse("accounts:login"), {"username": "duena", "password": "mala"})
         self.client.post(reverse("accounts:login"), {"username": "duena", "password": "UnaClaveSegura.2026"},
                          REMOTE_ADDR="10.0.0.7")
         self.client.post(reverse("accounts:logout"))
-        acciones = list(RegistroAuditoria.objects.order_by("creado_en").values_list("accion", flat=True))
+        acciones = list(RegistroAuditoria.objects.exclude(accion="consentimiento")
+                        .order_by("creado_en").values_list("accion", flat=True))
         self.assertEqual(acciones, ["login_fallido", "login", "logout"])
         self.assertEqual(RegistroAuditoria.objects.get(accion="login").ip, "10.0.0.7")
         self.assertFalse(RegistroAuditoria.objects.filter(detalle__contains="mala").exists())

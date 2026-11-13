@@ -90,6 +90,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # request.negocio / request.rol_negocio (colaboradores, ver accounts/negocio.py)
     'accounts.negocio.NegocioActivoMiddleware',
+    # RF-29: pide aceptar los términos vigentes antes de seguir (accounts/legal.py)
+    'accounts.legal.ConsentimientoMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]

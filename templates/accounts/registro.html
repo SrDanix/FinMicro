@@ -10,6 +10,7 @@
     <form method="post" novalidate>
       {% csrf_token %}
       {% include "partials/_campos_formulario.html" %}
+      <p class="texto-ayuda">Lee los <a href="{% url 'documento_legal' 'terminos' %}" target="_blank" rel="noopener">términos y condiciones</a> y la <a href="{% url 'documento_legal' 'privacidad' %}" target="_blank" rel="noopener">política de privacidad</a>.</p>
       <button type="submit" class="btn btn-primario btn-bloque">Crear cuenta gratis</button>
     </form>
 
