@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Indicadores y flujo de caja{% endblock %}
+{% block titulo_pagina %}Indicadores y flujo de caja{% endblock %}
+
+{% block acciones_barra %}
+<form method="get" style="display:flex; gap:8px; align-items:center;">
+  <label for="mes" class="texto-tenue">Mes</label>
+  <input type="month" id="mes" name="mes" value="{{ mes_valor }}" class="campo-input" style="width:auto;" onchange="this.form.submit()">
+  <noscript><button type="submit" class="btn btn-secundario btn-chico">Ver</button></noscript>
+</form>
+{% endblock %}
+
+{% block contenido %}
+<h2 class="mt-0" style="font-size:1.1rem;">{{ mes|date:"F Y"|capfirst }}</h2>
+
+<div class="grid grid-3">
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Margen bruto</div>
+    <div class="valor cifra{% if indicadores.margen_bruto < 0 %} gasto{% else %} ingreso{% endif %}">${{ indicadores.margen_bruto|floatformat:"0g" }}</div>
+    <p class="texto-ayuda">{% if indicadores.margen_porcentaje is not None %}{{ indicadores.margen_porcentaje }}% de tus ventas, después de los gastos variables.{% else %}Sin ventas este mes.{% endif %}</p>
+  </div>
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Punto de equilibrio</div>
+    <div class="valor cifra">{% if indicadores.punto_equilibrio is not None %}${{ indicadores.punto_equilibrio|floatformat:"0g" }}{% else %}—{% endif %}</div>
+    <p class="texto-ayuda">
+      {% if indicadores.punto_equilibrio is None %}
+        Se calcula cuando hay ventas y tus gastos variables son menores que ellas.
+      {% elif indicadores.ventas >= indicadores.punto_equilibrio %}
+        Ya vendiste lo suficiente para cubrir tus costos fijos.
+      {% else %}
+        Ventas que necesitas para cubrir tus costos fijos del mes.
+      {% endif %}
+    </p>
+  </div>
+  <div class="tarjeta tarjeta-metrica">
+    <div class="etiqueta">Ticket promedio</div>
+    <div class="valor cifra">{% if indicadores.ticket_promedio is not None %}${{ indicadores.ticket_promedio|floatformat:"0g" }}{% else %}—{% endif %}</div>
+    <p class="texto-ayuda">{{ indicadores.cantidad_ventas }} venta{{ indicadores.cantidad_ventas|pluralize }} por ${{ indicadores.ventas|floatformat:"0g" }}.</p>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:20px;">
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Gastos fijos y variables</h3></div>
+    {% with c=indicadores.costos %}
+    {% if c.total %}
+      <div class="flex-entre"><span>Fijos</span><span class="cifra">${{ c.fijos|floatformat:"0g" }} ({{ c.porcentaje_fijos }}%)</span></div>
+      <div class="barra-progreso" role="progressbar" aria-label="Gastos fijos" aria-valuenow="{{ c.porcentaje_fijos }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ c.porcentaje_fijos }}%;"></div></div>
+      <div class="flex-entre" style="margin-top:12px;"><span>Variables</span><span class="cifra">${{ c.variables|floatformat:"0g" }} ({{ c.porcentaje_variables }}%)</span></div>
+      <div class="barra-progreso" role="progressbar" aria-label="Gastos variables" aria-valuenow="{{ c.porcentaje_variables }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ c.porcentaje_variables }}%;"></div></div>
+      {% if c.sin_clasificar %}
+      <div class="flex-entre" style="margin-top:12px;"><span>Sin clasificar</span><span class="cifra">${{ c.sin_clasificar|floatformat:"0g" }} ({{ c.porcentaje_sin_clasificar }}%)</span></div>
+      <div class="barra-progreso" role="progressbar" aria-label="Gastos sin clasificar" aria-valuenow="{{ c.porcentaje_sin_clasificar }}" aria-valuemin="0" aria-valuemax="100"><div style="width: {{ c.porcentaje_sin_clasificar }}%;"></div></div>
+      <p class="texto-ayuda">Los gastos sin clasificar están en categorías sin tipo (por ejemplo "Otros gastos"). Crea categorías propias fijas o variables para mayor precisión.</p>
+      {% endif %}
+    {% else %}
+      <p class="texto-tenue">No hay gastos registrados este mes.</p>
+    {% endif %}
+    {% endwith %}
+  </div>
+
+  <div class="tarjeta">
+    <div class="tarjeta-titulo"><h3>Flujo de caja del mes</h3></div>
+    <div class="flex-entre"><span class="texto-tenue">Saldo inicial</span><span class="cifra">${{ flujo.saldo_inicial|floatformat:"0g" }}</span></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">+ Entradas</span><span class="cifra texto-ingreso">${{ flujo.entradas|floatformat:"0g" }}</span></div>
+    <div class="flex-entre" style="margin-top:8px;"><span class="texto-tenue">− Salidas</span><span class="cifra texto-gasto">${{ flujo.salidas|floatformat:"0g" }}</span></div>
+    <div class="flex-entre" style="margin-top:8px; border-top:1px solid var(--borde, #ddd); padding-top:8px;"><strong>Saldo final</strong><strong class="cifra">${{ flujo.saldo_final|floatformat:"0g" }}</strong></div>
+    {% if flujo.proyectado is not None %}
+      <div class="flex-entre" style="margin-top:16px;"><span class="texto-tenue">Entradas proyectadas</span><span class="cifra">${{ flujo.proyectado|floatformat:"0g" }}</span></div>
+      <p class="texto-ayuda">
+        Vendiste ${{ flujo.diferencia_absoluta|floatformat:"0g" }} {% if flujo.diferencia_con_proyeccion >= 0 %}más{% else %}menos{% endif %} de lo proyectado.
+      </p>
+    {% else %}
+      <p class="texto-ayuda">La comparación con lo proyectado aparece cuando hay ingresos en al menos 2 de los 6 meses anteriores.</p>
+    {% endif %}
+    <p class="texto-ayuda">El saldo inicial suma la caja que declaraste en <a href="{% url 'accounts:configuracion' %}">Configuración</a> y todo lo registrado antes de este mes.</p>
+  </div>
+</div>
+
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Últimos 6 meses</h3></div>
+  <canvas id="graficoFlujo" height="110" aria-label="Gráfico de saldo final y entradas reales versus proyectadas"></canvas>
+  <div class="tabla-envoltorio" style="margin-top:12px;">
+    <table class="tabla">
+      <thead>
+        <tr><th>Mes</th><th class="col-monto">Saldo inicial</th><th class="col-monto">Entradas</th><th class="col-monto">Proyectado</th><th class="col-monto">Salidas</th><th class="col-monto">Saldo final</th></tr>
+      </thead>
+      <tbody>
+        {% for f in flujos %}
+        <tr>
+          <td>{{ f.mes|date:"M Y" }}</td>
+          <td class="col-monto cifra">${{ f.saldo_inicial|floatformat:"0g" }}</td>
+          <td class="col-monto cifra texto-ingreso">${{ f.entradas|floatformat:"0g" }}</td>
+          <td class="col-monto cifra texto-tenue">{% if f.proyectado is not None %}${{ f.proyectado|floatformat:"0g" }}{% else %}—{% endif %}</td>
+          <td class="col-monto cifra texto-gasto">${{ f.salidas|floatformat:"0g" }}</td>
+          <td class="col-monto cifra">${{ f.saldo_final|floatformat:"0g" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+  (function () {
+    if (typeof Chart === "undefined") { document.getElementById("graficoFlujo").style.display = "none"; return; }
+    const datos = {{ grafico_flujo|safe }};
+    new Chart(document.getElementById("graficoFlujo"), {
+      type: "line",
+      data: {
+        labels: datos.etiquetas,
+        datasets: [
+          { label: "Saldo final", data: datos.saldo_final, borderColor: "#14231c", tension: 0.2 },
+          { label: "Entradas reales", data: datos.entradas, borderColor: "#1b6b4e", tension: 0.2 },
+          { label: "Entradas proyectadas", data: datos.proyectado, borderColor: "#b8732e", borderDash: [6, 4], tension: 0.2, spanGaps: true },
+        ],
+      },
+      options: { responsive: true },
+    });
+  })();
+</script>
+{% endblock %}

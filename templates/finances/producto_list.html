@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Productos y servicios{% endblock %}
+{% block titulo_pagina %}Productos y servicios{% endblock %}
+
+{% block acciones_barra %}
+{% if puede_editar %}<a href="{% url 'finances:crear_producto' %}" class="btn btn-primario">+ Nuevo producto</a>{% endif %}
+{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta">
+  <p class="texto-tenue mt-0">Tu catálogo te ahorra tiempo: al registrar una venta eliges el producto y la cantidad, y FinMicro calcula el monto.</p>
+  {% if productos %}
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead>
+        <tr><th>Nombre</th><th class="col-monto">Precio</th><th>IVA</th><th>Estado</th><th class="col-acciones"></th></tr>
+      </thead>
+      <tbody>
+        {% for p in productos %}
+        <tr>
+          <td>{{ p.nombre }}</td>
+          <td class="col-monto cifra">${{ p.precio|floatformat:"0g" }}</td>
+          <td>{% if p.afecto_iva %}Afecto{% else %}Exento{% endif %}</td>
+          <td>{% if p.activo %}<span class="insignia insignia-ingreso">Activo</span>{% else %}<span class="insignia insignia-basico">Inactivo</span>{% endif %}</td>
+          <td class="col-acciones">
+            {% if puede_editar %}
+            <a href="{% url 'finances:editar_producto' p.pk %}" class="btn btn-secundario btn-chico">Editar</a>
+            <a href="{% url 'finances:eliminar_producto' p.pk %}" class="btn btn-peligro btn-chico">Eliminar</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="estado-vacio">
+    <h3>Tu catálogo está vacío</h3>
+    <p class="texto-tenue">Agrega lo que vendes con su precio para registrar ventas más rápido.</p>
+    {% if puede_editar %}<a href="{% url 'finances:crear_producto' %}" class="btn btn-primario">Agregar producto</a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

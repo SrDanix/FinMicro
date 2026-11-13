@@ -11,4 +11,9 @@ urlpatterns = [
     path("movimientos/<int:pk>/editar/", views.editar_movimiento, name="editar_movimiento"),
     path("movimientos/<int:pk>/eliminar/", views.eliminar_movimiento, name="eliminar_movimiento"),
     path("categorias/nueva/", views.crear_categoria, name="crear_categoria"),
+    path("productos/", views.listar_productos, name="listar_productos"),
+    path("productos/nuevo/", views.crear_producto, name="crear_producto"),
+    path("productos/<int:pk>/editar/", views.editar_producto, name="editar_producto"),
+    path("productos/<int:pk>/eliminar/", views.eliminar_producto, name="eliminar_producto"),
+    path("indicadores/", views.indicadores, name="indicadores"),
 ]

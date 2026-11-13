@@ -34,6 +34,17 @@ CATEGORIAS_SISTEMA = [
 
 
 
+# RF-19 (ver migración 0004): lo que no aparece aquí queda sin clasificar.
+NATURALEZA_SISTEMA = {
+    "Mercadería / insumos": Categoria.Naturaleza.VARIABLE,
+    "Transporte": Categoria.Naturaleza.VARIABLE,
+    "Impuestos y comisiones": Categoria.Naturaleza.VARIABLE,
+    "Arriendo": Categoria.Naturaleza.FIJO,
+    "Servicios básicos": Categoria.Naturaleza.FIJO,
+    "Marketing": Categoria.Naturaleza.FIJO,
+}
+
+
 class Command(BaseCommand):
 
     help = "Crea las categorías de ingreso/gasto por defecto (visibles para todos los usuarios)."
@@ -48,7 +59,13 @@ class Command(BaseCommand):
 
             _, creada = Categoria.objects.get_or_create(
 
-                nombre=nombre, tipo=tipo, usuario=None, defaults={"es_gravable_iva": gravable}
+                nombre=nombre,
+                tipo=tipo,
+                usuario=None,
+                defaults={
+                    "es_gravable_iva": gravable,
+                    "naturaleza": NATURALEZA_SISTEMA.get(nombre, ""),
+                },
 
             )
 

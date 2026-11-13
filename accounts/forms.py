@@ -73,11 +73,21 @@ class ConfiguracionForm(forms.ModelForm):
 
     class Meta:
         model = Usuario
-        fields = ("regimen_tributario", "afecto_iva", "emite_boletas_honorarios", "meta_ventas_mensual")
+        fields = (
+            "regimen_tributario",
+            "afecto_iva",
+            "emite_boletas_honorarios",
+            "meta_ventas_mensual",
+            "saldo_caja_inicial",
+        )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         _estilizar(self)
+        self.fields["saldo_caja_inicial"].required = False
+
+    def clean_saldo_caja_inicial(self):
+        return self.cleaned_data.get("saldo_caja_inicial") or 0
 
     def clean(self):
         datos = super().clean()

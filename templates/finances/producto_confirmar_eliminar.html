@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Eliminar producto{% endblock %}
+{% block titulo_pagina %}Eliminar producto{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta" style="max-width:460px;">
+  <p>¿Seguro que quieres eliminar <strong>{{ producto.nombre }}</strong> de tu catálogo?</p>
+  {% if ventas %}
+  <p class="texto-tenue">Tiene {{ ventas }} venta{{ ventas|pluralize }} registrada{{ ventas|pluralize }}. Esas ventas se conservan con su monto. Si solo dejaste de venderlo, puedes marcarlo como inactivo.</p>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="flex-entre">
+      <a href="{% url 'finances:listar_productos' %}" class="btn btn-fantasma">Cancelar</a>
+      <button type="submit" class="btn btn-peligro">Sí, eliminar</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

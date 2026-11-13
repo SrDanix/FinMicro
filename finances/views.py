@@ -16,8 +16,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.negocio import requiere_edicion
-from .forms import CategoriaForm, FiltroMovimientosForm, MovimientoForm
-from .models import Categoria, Movimiento
+from .forms import CategoriaForm, FiltroMovimientosForm, MovimientoForm, ProductoForm
+from .models import Categoria, Movimiento, Producto
+from .services import buscar_por_texto, flujo_de_caja_ultimos_meses, indicadores_del_mes
 
 # calendar.month_abbr depende del locale del sistema (en Windows suele
 # quedar en inglés); se fijan las abreviaturas en español.
@@ -100,12 +101,19 @@ def listar_movimientos(request):
             movimientos = movimientos.filter(fecha__year=form.cleaned_data["anio"])
         if form.cleaned_data.get("tipo"):
             movimientos = movimientos.filter(tipo=form.cleaned_data["tipo"])
+        if form.cleaned_data.get("q"):
+            movimientos = buscar_por_texto(movimientos, form.cleaned_data["q"])
 
     return render(
         request,
         "finances/movimiento_list.html",
-        {"movimientos": movimientos, "form": form},
+        {"movimientos": movimientos, "form": form, "filtros": request.GET.urlencode()},
     )
+
+
+def _contexto_formulario(form, modo):
+    precios = {str(p.pk): int(p.precio) for p in form.fields["producto"].queryset}
+    return {"form": form, "modo": modo, "precios_productos": json.dumps(precios)}
 
 
 def _limite_alcanzado(usuario) -> bool:
@@ -141,7 +149,7 @@ def crear_movimiento(request):
     else:
         form = MovimientoForm(usuario=request.negocio, initial={"fecha": timezone.localdate()})
 
-    return render(request, "finances/movimiento_form.html", {"form": form, "modo": "crear"})
+    return render(request, "finances/movimiento_form.html", _contexto_formulario(form, "crear"))
 
 
 @login_required
@@ -157,7 +165,7 @@ def editar_movimiento(request, pk):
     else:
         form = MovimientoForm(instance=movimiento, usuario=request.negocio)
 
-    return render(request, "finances/movimiento_form.html", {"form": form, "modo": "editar"})
+    return render(request, "finances/movimiento_form.html", _contexto_formulario(form, "editar"))
 
 
 @login_required
@@ -185,3 +193,86 @@ def crear_categoria(request):
     else:
         form = CategoriaForm()
     return render(request, "finances/categoria_form.html", {"form": form})
+
+# ---------- RF-11: catálogo de productos y servicios ----------
+
+@login_required
+def listar_productos(request):
+    productos = Producto.objects.filter(usuario=request.negocio)
+    return render(request, "finances/producto_list.html", {"productos": productos})
+
+
+@login_required
+@requiere_edicion
+def crear_producto(request):
+    form = ProductoForm(request.POST or None, usuario=request.negocio)
+    if request.method == "POST" and form.is_valid():
+        producto = form.save(commit=False)
+        producto.usuario = request.negocio
+        producto.save()
+        messages.success(request, f'Producto "{producto.nombre}" agregado al catálogo.')
+        return redirect("finances:listar_productos")
+    return render(request, "finances/producto_form.html", {"form": form, "modo": "crear"})
+
+
+@login_required
+@requiere_edicion
+def editar_producto(request, pk):
+    producto = get_object_or_404(Producto, pk=pk, usuario=request.negocio)
+    form = ProductoForm(request.POST or None, instance=producto, usuario=request.negocio)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        messages.success(request, "Producto actualizado.")
+        return redirect("finances:listar_productos")
+    return render(request, "finances/producto_form.html", {"form": form, "modo": "editar"})
+
+
+@login_required
+@requiere_edicion
+def eliminar_producto(request, pk):
+    producto = get_object_or_404(Producto, pk=pk, usuario=request.negocio)
+    if request.method == "POST":
+        # Las ventas ya registradas conservan su monto; solo pierden el vínculo.
+        producto.delete()
+        messages.success(request, "Producto eliminado del catálogo.")
+        return redirect("finances:listar_productos")
+    return render(
+        request,
+        "finances/producto_confirmar_eliminar.html",
+        {"producto": producto, "ventas": producto.movimientos.count()},
+    )
+
+
+# ---------- RF-16, RF-17, RF-19: indicadores y flujo de caja ----------
+
+def _mes_elegido(request):
+    """Mes pedido en ?mes=AAAA-MM; por defecto, el mes en curso."""
+    hoy = timezone.localdate().replace(day=1)
+    try:
+        anio, mes = (int(x) for x in request.GET.get("mes", "").split("-"))
+        elegido = hoy.replace(year=anio, month=mes)
+    except (ValueError, TypeError):
+        return hoy
+    return min(elegido, hoy)
+
+
+@login_required
+def indicadores(request):
+    mes = _mes_elegido(request)
+    flujos = flujo_de_caja_ultimos_meses(request.negocio, mes, meses=6)
+    contexto = {
+        "mes": mes,
+        "mes_valor": mes.strftime("%Y-%m"),
+        "indicadores": indicadores_del_mes(request.negocio, mes),
+        "flujo": flujos[-1],
+        "flujos": flujos,
+        "grafico_flujo": json.dumps(
+            {
+                "etiquetas": [f"{MESES_ABREV[f.mes.month - 1]} {f.mes.year}" for f in flujos],
+                "saldo_final": [float(f.saldo_final) for f in flujos],
+                "entradas": [float(f.entradas) for f in flujos],
+                "proyectado": [float(f.proyectado) if f.proyectado is not None else None for f in flujos],
+            }
+        ),
+    }
+    return render(request, "finances/indicadores.html", contexto)

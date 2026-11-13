@@ -1,13 +1,17 @@
 from django import forms
 from django.db.models import Q
 
-from .models import Categoria, Movimiento
+from .models import Categoria, Movimiento, Producto
 
 
 class MovimientoForm(forms.ModelForm):
     class Meta:
         model = Movimiento
-        fields = ["tipo", "categoria", "monto", "fecha", "descripcion"]
+        fields = ["tipo", "categoria", "producto", "cantidad", "monto", "fecha", "descripcion"]
+        labels = {"producto": "Producto o servicio (opcional)", "cantidad": "Cantidad"}
+        help_texts = {
+            "producto": "Si eliges un producto de tu catálogo, el monto se calcula con su precio.",
+        }
         widgets = {
             # <input type="date"> solo acepta AAAA-MM-DD, no el formato local.
             "fecha": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
@@ -28,6 +32,17 @@ class MovimientoForm(forms.ModelForm):
             # data-tipo permite al pequeño script del template filtrar las
             # opciones visibles según el tipo (ingreso/gasto) elegido.
             self.fields["categoria"].widget.attrs["data-filtrable"] = "true"
+            # RF-11: productos activos del negocio (y el ya elegido, aunque esté inactivo).
+            productos = Producto.objects.filter(usuario=usuario, activo=True)
+            if self.instance.producto_id:
+                productos = productos | Producto.objects.filter(pk=self.instance.producto_id)
+            self.fields["producto"].queryset = productos.order_by("nombre")
+        else:
+            self.fields["producto"].queryset = Producto.objects.none()
+        self.fields["producto"].label_from_instance = lambda p: f"{p.nombre} (${p.precio:,.0f})".replace(",", ".")
+        self.fields["monto"].required = False
+        self.fields["monto"].help_text = "Con producto puedes dejarlo vacío: se calcula como precio × cantidad."
+        self.fields["cantidad"].widget.attrs.setdefault("min", "1")
 
     def clean(self):
         datos = super().clean()
@@ -35,22 +50,66 @@ class MovimientoForm(forms.ModelForm):
         tipo = datos.get("tipo")
         if categoria and tipo and categoria.tipo != tipo:
             self.add_error("categoria", "Esta categoría no corresponde al tipo elegido.")
+
+        producto = datos.get("producto")
+        if producto:
+            if tipo and tipo != Categoria.Tipo.INGRESO:
+                self.add_error("producto", "Solo las ventas (ingresos) llevan producto.")
+            cantidad = datos.get("cantidad") or 1
+            datos["cantidad"] = cantidad
+            if not datos.get("monto"):
+                datos["monto"] = producto.precio * cantidad
+            if not datos.get("descripcion"):
+                datos["descripcion"] = f"{cantidad} × {producto.nombre}"
+        else:
+            datos["cantidad"] = None
+        if not datos.get("monto") and "monto" not in self.errors:
+            self.add_error("monto", "Ingresa el monto o elige un producto.")
         return datos
+
+
+class ProductoForm(forms.ModelForm):
+    class Meta:
+        model = Producto
+        fields = ["nombre", "precio", "afecto_iva", "activo"]
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.usuario = usuario
+        for nombre, campo in self.fields.items():
+            if not isinstance(campo.widget, forms.CheckboxInput):
+                campo.widget.attrs.setdefault("class", "campo-input")
+
+    def clean_nombre(self):
+        nombre = self.cleaned_data["nombre"].strip()
+        repetido = Producto.objects.filter(usuario=self.usuario, nombre__iexact=nombre)
+        if self.instance.pk:
+            repetido = repetido.exclude(pk=self.instance.pk)
+        if repetido.exists():
+            raise forms.ValidationError("Ya tienes un producto con ese nombre.")
+        return nombre
 
 
 class CategoriaForm(forms.ModelForm):
     class Meta:
         model = Categoria
-        fields = ["nombre", "tipo", "es_gravable_iva"]
+        fields = ["nombre", "tipo", "naturaleza", "es_gravable_iva"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for nombre, campo in self.fields.items():
             campo.widget.attrs.setdefault("class", "campo-input")
+        self.fields["naturaleza"].help_text += " Solo para gastos."
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get("tipo") == Categoria.Tipo.INGRESO:
+            datos["naturaleza"] = ""
+        return datos
 
 
 class FiltroMovimientosForm(forms.Form):
-    """Filtro simple para la lista de movimientos (mes/año + tipo)."""
+    """Filtro de la lista de movimientos: mes, año, tipo y texto (RF-10)."""
 
     MESES = [("", "Todos")] + [
         (i, nombre)
@@ -65,6 +124,12 @@ class FiltroMovimientosForm(forms.Form):
     anio = forms.IntegerField(required=False, min_value=2020, max_value=2100, label="Año")
     tipo = forms.ChoiceField(
         choices=[("", "Todos")] + list(Categoria.Tipo.choices), required=False, label="Tipo"
+    )
+    q = forms.CharField(
+        required=False,
+        max_length=100,
+        label="Buscar",
+        widget=forms.TextInput(attrs={"placeholder": "Descripción o categoría", "type": "search"}),
     )
 
     def __init__(self, *args, **kwargs):

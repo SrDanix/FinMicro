@@ -102,6 +102,13 @@ class Usuario(AbstractUser):
         blank=True,
         help_text="Opcional. Se muestra tu avance en el panel.",
     )
+    # RF-16: dinero disponible al empezar a usar FinMicro. El saldo inicial de
+    # cada mes es este monto más todo lo registrado en los meses anteriores.
+    saldo_caja_inicial = models.IntegerField(
+        "Caja al empezar a usar FinMicro (CLP)",
+        default=0,
+        help_text="Lo que tenías en caja y cuenta del negocio antes de tu primer registro.",
+    )
     fecha_registro = models.DateTimeField("Fecha de registro", auto_now_add=True)
 
     REQUIRED_FIELDS = ["email", "rut", "nombre_negocio"]
