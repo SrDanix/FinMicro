@@ -38,15 +38,17 @@ flowchart TB
             G["Gunicorn + Django 6<br/>Aplicación web (3 workers)<br/>127.0.0.1:8000"]
             W["WhiteNoise<br/>Archivos estáticos"]
         end
-        V[("Volumen Docker<br/>SQLite<br/>/app/data")]
+        V[("Volumen Docker<br/>SQLite (etapa E0)<br/>/app/data")]
     end
+    RDS[("Amazon RDS<br/>PostgreSQL 17<br/>privada, SSL<br/>(doc 17)")]
     B["Navegador<br/>HTML + CSS + Chart.js"]
     S3[("Amazon S3<br/>Respaldos diarios<br/>(actividad 6.2)")]
 
     B -- HTTPS --> N
     N -- "HTTP local" --> G
     G --- W
-    G -- "lectura/escritura" --> V
+    G -- "lectura/escritura (E0)" --> V
+    G -. "SQL sobre SSL (E1)" .-> RDS
     V -. "copia diaria" .-> S3
 ```
 

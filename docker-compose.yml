@@ -1,7 +1,25 @@
-# Levanta FinMicro con un solo comando:  docker compose up --build
+# Desarrollo local con el mismo motor que producción (PostgreSQL).
+# Levantar:  docker compose up --build      →  http://localhost:8000
 services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: finmicro
+      POSTGRES_USER: finmicro
+      POSTGRES_PASSWORD: finmicro-local   # solo para tu PC; nunca la uses en AWS
+    volumes:
+      - finmicro_postgres:/var/lib/postgresql/data   # los datos no se borran al apagar
+    healthcheck:   # "web" espera a que PostgreSQL acepte conexiones
+      test: ["CMD-SHELL", "pg_isready -U finmicro -d finmicro"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
   web:
     build: .
+    depends_on:
+      db:
+        condition: service_healthy
     ports:
       - "8000:8000"          # puerto de tu PC : puerto del contenedor
     environment:
@@ -10,10 +28,13 @@ services:
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
       DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:8000,http://127.0.0.1:8000"
       DJANGO_SECRET_KEY: "cambia-esto-por-una-clave-larga-y-secreta"
-      SQLITE_PATH: "/app/data/db.sqlite3"
+      DB_ENGINE: postgresql
+      DB_NAME: finmicro
+      DB_USER: finmicro
+      DB_PASSWORD: finmicro-local
+      DB_HOST: db            # el nombre del servicio de arriba
+      DB_PORT: "5432"
       PAGOS_MODO_SIMULADO: "True"
-    volumes:
-      - finmicro_datos:/app/data   # la base de datos vive aquí y no se borra
 
 volumes:
-  finmicro_datos:
+  finmicro_postgres:
