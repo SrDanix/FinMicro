@@ -95,3 +95,88 @@ class RecorridoCompletoTests(TestCase):
              "flujos_texto": "600000\n600000\n600000"},
         )
         self.assertContains(respuesta, "Viable")
+
+
+# ---------- RF-24: alertas ----------
+from datetime import date
+from decimal import Decimal
+
+from django.core import mail
+from django.core.management import call_command
+
+from accounts.models import Usuario
+from subscriptions.services import asegurar_plan_basico
+from taxes.calendario import Obligacion
+
+from .alertas import regla_gasto_inusual, regla_limite_plan, regla_vencimiento
+from .models import Alerta
+
+
+class ReglasDeAlertaTests(TestCase):
+    def test_vencimiento(self):
+        ob = Obligacion("F29", "F29", "octubre 2026", "2026-10", date(2026, 11, 20))
+        self.assertEqual(regla_vencimiento(ob, date(2026, 11, 20))[0], "urgente")
+        self.assertIn("mañana", regla_vencimiento(ob, date(2026, 11, 19))[1])
+        self.assertEqual(regla_vencimiento(ob, date(2026, 11, 15))[0], "aviso")
+        self.assertIsNone(regla_vencimiento(ob, date(2026, 11, 12)))     # faltan 8 días
+        self.assertIsNone(regla_vencimiento(ob, date(2026, 11, 21)))     # ya venció
+
+    def test_limite_de_plan(self):
+        self.assertEqual(regla_limite_plan(48, 60)[0], "80")
+        self.assertEqual(regla_limite_plan(60, 60)[0], "100")
+        self.assertIsNone(regla_limite_plan(47, 60))
+        self.assertIsNone(regla_limite_plan(500, None))
+
+    def test_gasto_inusual_usa_la_mediana(self):
+        self.assertIn("5.0 veces", regla_gasto_inusual(500, [100, 100, 120]))
+        self.assertIsNone(regla_gasto_inusual(150, [100, 100, 100]))
+        self.assertIsNone(regla_gasto_inusual(500, [100, 100]))           # historial insuficiente
+        # Un único gasto alto anterior no vuelve normal un gasto alto.
+        self.assertIsNotNone(regla_gasto_inusual(400, [100, 100, 100, 5000]))
+
+
+class AlertasIntegracionTests(TestCase):
+    def setUp(self):
+        self.usuario = Usuario.objects.create_user(
+            username="taller", email="taller@example.com", password="UnaClaveSegura.2026",
+            rut="11111111-1", nombre_negocio="Taller", regimen_tributario="PP", afecto_iva=True,
+        )
+        asegurar_plan_basico(self.usuario)
+        self.client.login(username="taller", password="UnaClaveSegura.2026")
+        self.transporte = Categoria.objects.get(nombre="Transporte", usuario=None)
+
+    def _gasto(self, monto):
+        self.client.post(reverse("finances:crear_movimiento"), {
+            "tipo": "gasto", "categoria": self.transporte.pk, "monto": str(monto),
+            "fecha": timezone.localdate().isoformat(),
+        })
+
+    def test_gasto_inusual_genera_alerta_en_el_panel(self):
+        for monto in (10_000, 12_000, 11_000):
+            self._gasto(monto)
+        self.assertFalse(Alerta.objects.filter(codigo__startswith="GASTO").exists())
+        self._gasto(50_000)
+        alerta = Alerta.objects.get(codigo__startswith="GASTO")
+        self.assertContains(self.client.get(reverse("finances:dashboard")), "4.5 veces")
+
+        self.client.post(reverse("core:marcar_alerta_leida", args=[alerta.pk]), {"siguiente": "https://malicioso.example"})
+        alerta.refresh_from_db()
+        self.assertTrue(alerta.leida)
+        self.assertNotContains(self.client.get(reverse("finances:dashboard")), "4.5 veces")
+
+    def test_otro_negocio_no_ve_ni_marca_mis_alertas(self):
+        alerta = Alerta.objects.create(negocio=self.usuario, codigo="X", mensaje="Privada")
+        otro = Usuario.objects.create_user(username="otro", email="o@example.com", password="UnaClaveSegura.2026",
+                                           rut="22222222-2", nombre_negocio="Otro")
+        self.client.login(username="otro", password="UnaClaveSegura.2026")
+        self.assertNotContains(self.client.get(reverse("core:alertas")), "Privada")
+        self.assertEqual(self.client.post(reverse("core:marcar_alerta_leida", args=[alerta.pk])).status_code, 404)
+
+    def test_comando_diario_crea_alertas_de_vencimiento_y_avisa_por_correo(self):
+        with mock.patch("core.management.commands.generar_alertas.timezone.localdate", return_value=date(2026, 11, 15)):
+            call_command("generar_alertas", stdout=mock.MagicMock())
+            call_command("generar_alertas", stdout=mock.MagicMock())    # idempotente
+        alerta = Alerta.objects.get(negocio=self.usuario)
+        self.assertEqual(alerta.codigo, "VENC-F29-2026-10")
+        self.assertIn("20-11-2026", alerta.mensaje)
+        self.assertEqual(len(mail.outbox), 1)

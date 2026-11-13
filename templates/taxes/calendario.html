@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Calendario tributario{% endblock %}
+{% block titulo_pagina %}Calendario tributario{% endblock %}
+
+{% block acciones_barra %}
+<a href="{% url 'taxes:calculadora' %}" class="btn btn-fantasma">Volver a impuestos</a>
+{% endblock %}
+
+{% block contenido %}
+<p class="texto-tenue" style="max-width:70ch;">
+  Vencimientos de los próximos 12 meses según tu régimen ({{ negocio.get_regimen_tributario_display }}{% if negocio.afecto_iva %}, afecto a IVA{% endif %}).
+  Si un vencimiento cae en fin de semana o feriado, ya está corrido al día hábil siguiente. Confírmalos siempre en sii.cl.
+</p>
+
+<div class="tarjeta" style="margin-top:16px;">
+  {% if obligaciones %}
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead><tr><th>Vence</th><th>Obligación</th><th>Período</th><th>Faltan</th></tr></thead>
+      <tbody>
+      {% for o, dias in obligaciones %}
+        <tr>
+          <td><strong>{{ o.vence|date:"d/m/Y" }}</strong></td>
+          <td>{{ o.descripcion }}</td>
+          <td>{{ o.periodo }}</td>
+          <td>{% if dias == 0 %}<span class="insignia insignia-gasto">Hoy</span>{% elif dias <= 7 %}<span class="insignia insignia-gasto">{{ dias }} día{{ dias|pluralize }}</span>{% else %}<span class="texto-tenue">{{ dias }} días</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% elif sin_inicio %}
+  <div class="estado-vacio">
+    <h3>No tienes vencimientos tributarios</h3>
+    <p class="texto-tenue">Estás registrado sin inicio de actividades. Si formalizas tu negocio en el SII, actualiza tu régimen en <a href="{% url 'accounts:configuracion' %}">Configuración</a> y verás aquí tus vencimientos.</p>
+  </div>
+  {% else %}
+  <div class="estado-vacio"><h3>Sin vencimientos en los próximos 12 meses</h3></div>
+  {% endif %}
+</div>
+<p class="texto-ayuda">FinMicro te avisa en el panel y por correo una semana antes de cada vencimiento.</p>
+{% endblock %}

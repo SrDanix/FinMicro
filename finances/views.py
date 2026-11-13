@@ -16,6 +16,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.negocio import requiere_edicion
+from core.alertas import revisar_movimiento, revisar_vencimientos
+from core.models import Alerta
 from .forms import CategoriaForm, FiltroMovimientosForm, MovimientoForm, ProductoForm
 from .models import Categoria, Movimiento, Producto
 from .services import buscar_por_texto, flujo_de_caja_ultimos_meses, indicadores_del_mes
@@ -70,8 +72,10 @@ def dashboard(request):
         usuario=request.negocio, fecha__year=hoy.year, fecha__month=hoy.month
     ).count()
 
+    revisar_vencimientos(request.negocio, hoy)
     meta = request.negocio.meta_ventas_mensual
     contexto = {
+        "alertas": Alerta.objects.filter(negocio=request.negocio, leida=False)[:5],
         "meta_ventas": meta,
         "avance_meta": min(100, round(resumen_actual["ingresos"] * 100 / meta)) if meta else None,
         "resumen": resumen_actual,
@@ -144,6 +148,7 @@ def crear_movimiento(request):
             movimiento = form.save(commit=False)
             movimiento.usuario = request.negocio
             movimiento.save()
+            revisar_movimiento(movimiento, timezone.localdate())
             messages.success(request, "Movimiento registrado.")
             return redirect("finances:dashboard")
     else:
