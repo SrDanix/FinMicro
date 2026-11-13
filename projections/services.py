@@ -36,7 +36,7 @@ def regresion_lineal_simple(valores_y: list[float]) -> tuple[float, float]:
     xs = list(range(n))
     suma_x = sum(xs)
     suma_y = sum(valores_y)
-    suma_xy = sum(x * y for x, y in zip(xs, valores_y))
+    suma_xy = sum(x * y for x, y in zip(xs, valores_y, strict=True))
     suma_x2 = sum(x * x for x in xs)
 
     denominador = n * suma_x2 - suma_x**2
@@ -174,7 +174,7 @@ def proyectar_escenarios(ingresos_base, gastos_base, escenarios=ESCENARIOS):
     salida = []
     for nombre, var_ingresos, var_gastos in escenarios:
         meses, acumulado = [], Decimal("0")
-        for ingreso, gasto in zip(ingresos_base, gastos_base):
+        for ingreso, gasto in zip(ingresos_base, gastos_base, strict=True):
             ingresos = _redondear_clp(Decimal(ingreso) * (1 + var_ingresos))
             gastos = _redondear_clp(Decimal(gasto) * (1 + var_gastos))
             acumulado += ingresos - gastos

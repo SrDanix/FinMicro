@@ -28,7 +28,8 @@ MAX_TOKENS = 4096
 MAX_LARGO_PREGUNTA = 500
 
 INSTRUCCIONES = """Eres el asistente financiero de FinMicro, una plataforma chilena de gestión para microempresarios.
-Respondes preguntas del dueño de un negocio usando únicamente los datos de su negocio que vienen entre las etiquetas <datos_del_negocio>.
+Respondes preguntas del dueño de un negocio usando únicamente los datos de su negocio
+que vienen entre las etiquetas <datos_del_negocio>.
 
 Cómo responder:
 - En español de Chile, con palabras simples, en uno o dos párrafos cortos o una lista breve.
@@ -80,19 +81,24 @@ def contexto_del_negocio(negocio, hoy=None):
         fila = Movimiento.objects.filter(usuario=negocio, fecha__year=inicio.year, fecha__month=inicio.month)
         ingresos = fila.filter(tipo=Categoria.Tipo.INGRESO).aggregate(t=Sum("monto"))["t"] or 0
         gastos = fila.filter(tipo=Categoria.Tipo.GASTO).aggregate(t=Sum("monto"))["t"] or 0
-        lineas.append(f"- {inicio:%m-%Y}: ingresos {_pesos(ingresos)}, gastos {_pesos(gastos)}, resultado {_pesos(ingresos - gastos)}")
+        lineas.append(
+            f"- {inicio:%m-%Y}: ingresos {_pesos(ingresos)}, gastos {_pesos(gastos)}, "
+            f"resultado {_pesos(ingresos - gastos)}"
+        )
 
     datos = indicadores_del_mes(negocio, mes)
     flujo = flujo_de_caja(negocio, mes)
     lineas += [
         "",
         "Indicadores del mes en curso:",
-        f"- Ventas {_pesos(datos['ventas'])} en {datos['cantidad_ventas']} registros; ticket promedio {_pesos(datos['ticket_promedio'])}",
+        f"- Ventas {_pesos(datos['ventas'])} en {datos['cantidad_ventas']} registros; "
+        f"ticket promedio {_pesos(datos['ticket_promedio'])}",
         f"- Gastos fijos {_pesos(datos['costos'].fijos)}, variables {_pesos(datos['costos'].variables)}, "
         f"sin clasificar {_pesos(datos['costos'].sin_clasificar)}",
         f"- Margen bruto {_pesos(datos['margen_bruto'])}"
         + (f" ({datos['margen_porcentaje']} % de las ventas)" if datos["margen_porcentaje"] is not None else ""),
-        f"- Punto de equilibrio: {_pesos(datos['punto_equilibrio']) if datos['punto_equilibrio'] is not None else 'no calculable'}",
+        "- Punto de equilibrio: "
+        + (_pesos(datos["punto_equilibrio"]) if datos["punto_equilibrio"] is not None else "no calculable"),
         f"- Caja: saldo inicial {_pesos(flujo.saldo_inicial)}, saldo actual {_pesos(flujo.saldo_final)}"
         + (f", ingreso proyectado del mes {_pesos(flujo.proyectado)}" if flujo.proyectado is not None else ""),
         "",

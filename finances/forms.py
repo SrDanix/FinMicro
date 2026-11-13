@@ -21,7 +21,7 @@ class MovimientoForm(forms.ModelForm):
     def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.usuario = usuario
-        for nombre, campo in self.fields.items():
+        for campo in self.fields.values():
             campo.widget.attrs.setdefault("class", "campo-input")
 
         if usuario is not None:
@@ -76,7 +76,7 @@ class ProductoForm(forms.ModelForm):
     def __init__(self, *args, usuario=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.usuario = usuario
-        for nombre, campo in self.fields.items():
+        for campo in self.fields.values():
             if not isinstance(campo.widget, forms.CheckboxInput):
                 campo.widget.attrs.setdefault("class", "campo-input")
 
@@ -97,7 +97,7 @@ class CategoriaForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for nombre, campo in self.fields.items():
+        for campo in self.fields.values():
             campo.widget.attrs.setdefault("class", "campo-input")
         self.fields["naturaleza"].help_text += " Solo para gastos."
 

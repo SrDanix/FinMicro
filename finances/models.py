@@ -1,9 +1,3 @@
-from django.conf import settings
-from django.core.exceptions import ValidationError
-from django.core.validators import MinValueValidator
-from django.db import models
-
-# Create your models here.
 """
 Gestión financiera del microempresario: categorías, ingresos y gastos.
 Es el módulo base sobre el que se apoyan `taxes` (calcula impuestos a
@@ -17,7 +11,10 @@ del propio usuario de la plataforma (no para FinMicro como empresa).
 """
 from decimal import Decimal
 
-
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
+from django.db import models
 
 
 class Categoria(models.Model):
@@ -133,6 +130,11 @@ class Movimiento(models.Model):
         signo = "+" if self.tipo == Categoria.Tipo.INGRESO else "-"
         return f"{signo}${self.monto} — {self.categoria} ({self.fecha})"
 
+    def save(self, *args, **kwargs):
+        if self.categoria_id and not self.tipo:
+            self.tipo = self.categoria.tipo
+        super().save(*args, **kwargs)
+
     def clean(self):
         # El tipo del movimiento debe ser consistente con el tipo de su
         # categoría; evita que un "Arriendo" (gasto) quede cargado como
@@ -143,8 +145,3 @@ class Movimiento(models.Model):
             )
         if self.producto_id and self.tipo != Categoria.Tipo.INGRESO:
             raise ValidationError({"producto": "Solo las ventas (ingresos) llevan producto."})
-
-    def save(self, *args, **kwargs):
-        if self.categoria_id and not self.tipo:
-            self.tipo = self.categoria.tipo
-        super().save(*args, **kwargs)

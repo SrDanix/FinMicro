@@ -56,6 +56,39 @@ jobs:
       - name: Pruebas automatizadas
         run: python manage.py test --verbosity 2
 
+  calidad:
+    # Actividad X-10: cobertura, dependencias vulnerables y análisis estático.
+    name: Calidad (cobertura, pip-audit, ruff, bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Instalar dependencias y herramientas
+        run: pip install -r requirements.txt coverage ruff bandit pip-audit
+
+      - name: Análisis estático (ruff.toml)
+        run: ruff check .
+
+      - name: Riesgos de seguridad en el código (severidad media o alta)
+        run: bandit -q -r . -ll -x ./staticfiles
+
+      - name: Dependencias sin vulnerabilidades conocidas (RNF-05)
+        run: pip-audit -r requirements.txt
+
+      - name: Pruebas con cobertura
+        run: coverage run manage.py test
+
+      - name: Cobertura total de al menos 85 %
+        run: coverage report --fail-under=85
+
+      - name: Cobertura de los módulos de cálculo de al menos 90 %
+        run: >-
+          coverage report --fail-under=90
+          --include="finances/services.py,finances/recomendaciones.py,taxes/services.py,taxes/calendario.py,projections/services.py,core/alertas.py"
+
   despliegue:
     name: Checklist de despliegue de Django
     runs-on: ubuntu-latest
@@ -76,7 +109,7 @@ jobs:
   docker:
     name: Construcción de la imagen Docker
     runs-on: ubuntu-latest
-    needs: [pruebas, despliegue]
+    needs: [pruebas, calidad, despliegue]
     steps:
       - uses: actions/checkout@v4
       - name: Construir imagen

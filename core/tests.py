@@ -100,7 +100,6 @@ class RecorridoCompletoTests(TestCase):
 
 # ---------- RF-24: alertas ----------
 from datetime import date
-from decimal import Decimal
 
 from django.core import mail
 from django.core.management import call_command

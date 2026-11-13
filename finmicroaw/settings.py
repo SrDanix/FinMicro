@@ -225,7 +225,7 @@ CACHES = {
 }
  
 # --- Mensajes (alineado con las clases CSS de static/css/styles.css) -----
-from django.contrib.messages import constants as message_constants
+from django.contrib.messages import constants as message_constants  # noqa: E402
  
 MESSAGE_TAGS = {
     message_constants.DEBUG: "aviso-debug",

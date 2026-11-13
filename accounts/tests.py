@@ -206,7 +206,7 @@ class RecuperarClaveTests(TestCase):
         crear_usuario("dueno", "dueno@example.com", "11111111-1")
         self.client.post(reverse("accounts:password_reset"), {"email": "dueno@example.com"})
         self.assertEqual(len(mail.outbox), 1)
-        enlace = next(l for l in mail.outbox[0].body.splitlines() if "/clave/recuperar/" in l)
+        enlace = next(linea for linea in mail.outbox[0].body.splitlines() if "/clave/recuperar/" in linea)
         ruta = enlace.split("testserver", 1)[1]
         respuesta = self.client.get(ruta, follow=True)
         self.assertContains(respuesta, "Nueva contraseña")

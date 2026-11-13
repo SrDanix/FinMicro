@@ -23,7 +23,6 @@ from .services import (
     NINGUNA,
     VENCER,
     EstadoPago,
-    ErrorPasarela,
     FlowGateway,
     activar_suscripcion_pagada,
     asegurar_plan_basico,

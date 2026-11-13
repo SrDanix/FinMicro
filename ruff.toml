@@ -1,0 +1,11 @@
+# Análisis estático (actividad X-10). Uso: ruff check .
+line-length = 130
+target-version = "py313"
+extend-exclude = ["migrations", "staticfiles"]
+
+[lint]
+# E/F: errores y pyflakes · B: errores probables (bugbear) · S: seguridad · DJ: Django
+select = ["E", "F", "B", "S", "DJ"]
+
+[lint.per-file-ignores]
+"**/tests.py" = ["S101", "S105", "S106", "S107", "E402", "E501"]

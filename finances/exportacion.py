@@ -66,7 +66,7 @@ def a_xlsx(filas, titulo="Movimientos") -> bytes:
         celda.number_format = "DD-MM-YYYY"
     for celda in hoja["F"][1:]:
         celda.number_format = "#,##0"
-    for columna, ancho in zip("ABCDEFG", (12, 10, 24, 22, 10, 14, 40)):
+    for columna, ancho in zip("ABCDEFG", (12, 10, 24, 22, 10, 14, 40), strict=True):
         hoja.column_dimensions[columna].width = ancho
     hoja.freeze_panes = "A2"
     buffer = io.BytesIO()

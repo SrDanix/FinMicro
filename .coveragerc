@@ -1,0 +1,16 @@
+# Cobertura de pruebas (actividad X-10). Uso: coverage run manage.py test && coverage report
+[run]
+source = .
+branch = True
+omit =
+    */migrations/*
+    */tests.py
+    manage.py
+    */asgi.py
+    */wsgi.py
+    */settings.py
+    deploy/*
+
+[report]
+show_missing = True
+skip_covered = True

@@ -24,7 +24,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         hoy = timezone.localdate()
         conteo = {AVISAR: 0, GRACIA: 0, VENCER: 0}
-        activas = Suscripcion.objects.filter(estado=Suscripcion.Estado.ACTIVA, fecha_fin__isnull=False).select_related("usuario", "plan")
+        activas = Suscripcion.objects.filter(
+            estado=Suscripcion.Estado.ACTIVA, fecha_fin__isnull=False
+        ).select_related("usuario", "plan")
         for suscripcion in activas:
             fin = timezone.localtime(suscripcion.fecha_fin).date()
             accion = evaluar_renovacion(fin, hoy)
