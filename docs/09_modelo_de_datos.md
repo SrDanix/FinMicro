@@ -2,8 +2,8 @@
 
 **Actividad 3.4** · Responsable: Marcelo · Aprueba: Danilo · Semana 7
 
-Refleja los modelos implementados en el repositorio al cierre del Sprint 1. Las
-entidades de sprints futuros aparecen al final como propuesta.
+Refleja los modelos implementados en el repositorio al 13-11-2026 (sprints 1 a 6). La
+tabla del final resume qué agregó cada sprint. Imagen para anexos: [diagramas/modelo_de_datos.png](diagramas/modelo_de_datos.png).
 
 ```mermaid
 erDiagram
@@ -14,6 +14,13 @@ erDiagram
     USUARIO |o--o{ COLABORACION : "recibe (colaborador)"
     PLAN ||--o{ SUSCRIPCION : "define"
     CATEGORIA ||--o{ MOVIMIENTO : "clasifica"
+    USUARIO ||--o{ PRODUCTO : "vende (negocio)"
+    PRODUCTO |o--o{ MOVIMIENTO : "venta desde catálogo"
+    USUARIO ||--o{ ALERTA : "recibe (negocio)"
+    USUARIO ||--o{ CONSENTIMIENTO : "acepta"
+    DOCUMENTO_LEGAL ||--o{ CONSENTIMIENTO : "versión aceptada"
+    USUARIO |o--o{ REGISTRO_AUDITORIA : "acciones sensibles"
+    USUARIO ||--o{ CONSULTA_ASISTENTE : "pregunta (negocio)"
 
     USUARIO {
         bigint id PK
@@ -28,6 +35,7 @@ erDiagram
         bool afecto_iva
         bool emite_boletas_honorarios
         int meta_ventas_mensual "nullable"
+        int saldo_caja_inicial
         datetime fecha_registro
     }
     COLABORACION {
@@ -69,16 +77,79 @@ erDiagram
         varchar tipo "ingreso | gasto"
         bigint usuario_id FK "null = del sistema"
         bool es_gravable_iva
+        varchar naturaleza "fijo | variable | vacío"
     }
     MOVIMIENTO {
         bigint id PK
         bigint usuario_id FK "dueño del negocio"
         bigint categoria_id FK "PROTECT"
+        bigint producto_id FK "nullable, SET_NULL"
+        int cantidad "nullable"
         varchar tipo "= categoria.tipo"
         decimal monto "12,2 · mínimo 1"
         date fecha
         varchar descripcion
         datetime creado_en
+    }
+    PRODUCTO {
+        bigint id PK
+        bigint usuario_id FK
+        varchar nombre "UK con usuario"
+        decimal precio
+        bool afecto_iva
+        bool activo
+    }
+    TASA_TRIBUTARIA {
+        bigint id PK
+        varchar codigo "IVA | RET_HON"
+        decimal valor
+        date vigente_desde "UK con codigo"
+        date vigente_hasta "nullable"
+        varchar fuente
+    }
+    FERIADO {
+        bigint id PK
+        date fecha UK
+        varchar nombre
+    }
+    ALERTA {
+        bigint id PK
+        bigint negocio_id FK
+        varchar codigo "UK con negocio"
+        varchar severidad
+        varchar mensaje
+        bool leida
+    }
+    DOCUMENTO_LEGAL {
+        bigint id PK
+        varchar tipo "terminos | privacidad"
+        varchar version "UK con tipo"
+        text contenido
+        char huella "SHA-256"
+        datetime vigente_desde
+    }
+    CONSENTIMIENTO {
+        bigint id PK
+        bigint usuario_id FK
+        bigint documento_id FK "PROTECT"
+        datetime aceptado_en
+        inet ip
+    }
+    REGISTRO_AUDITORIA {
+        bigint id PK
+        bigint usuario_id FK "SET_NULL"
+        varchar nombre_usuario
+        varchar accion
+        varchar detalle
+        inet ip
+        datetime creado_en
+    }
+    CONSULTA_ASISTENTE {
+        bigint id PK
+        bigint negocio_id FK
+        varchar pregunta
+        text respuesta
+        datetime creada_en
     }
 ```
 

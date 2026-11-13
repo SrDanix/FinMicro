@@ -39,6 +39,8 @@ flowchart TB
             W["WhiteNoise<br/>Archivos estáticos"]
         end
         V[("Volumen Docker<br/>SQLite (etapa E0)<br/>/app/data")]
+        PG[("Contenedor PostgreSQL 17<br/>opción B, red interna<br/>docker-compose.postgres.yml")]
+        C["cron<br/>respaldos, alertas,<br/>suscripciones"]
     end
     RDS[("Amazon RDS<br/>PostgreSQL 17<br/>privada, SSL<br/>(doc 17)")]
     B["Navegador<br/>HTML + CSS + Chart.js"]
@@ -48,8 +50,9 @@ flowchart TB
     N -- "HTTP local" --> G
     G --- W
     G -- "lectura/escritura (E0)" --> V
-    G -. "SQL sobre SSL (E1)" .-> RDS
-    V -. "copia diaria" .-> S3
+    G -. "SQL sobre SSL (E1, opción A)" .-> RDS
+    G -. "SQL (E1, opción B)" .-> PG
+    C -. "respaldar.sh (doc 19)" .-> S3
 ```
 
 ## Nivel 3 — Componentes de la aplicación Django
@@ -57,20 +60,24 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph Django["Aplicación Django (finmicroaw)"]
-        MW["NegocioActivoMiddleware<br/>request.negocio / rol"]
-        ACC["accounts<br/>Usuario, RUT, configuración,<br/>colaboradores, datos personales"]
-        FIN["finances<br/>Categorías, movimientos,<br/>panel"]
-        TAX["taxes<br/>IVA, honorarios"]
-        PRO["projections<br/>Proyección, VAN/TIR"]
-        SUB["subscriptions<br/>Planes, suscripciones,<br/>pasarelas (adaptadores)"]
-        CORE["core<br/>Portada, indicadores<br/>(BancoCentralService)"]
+        MW["NegocioActivoMiddleware · ConsentimientoMiddleware<br/>request.negocio / rol · términos vigentes"]
+        ACC["accounts<br/>Usuario, RUT, configuración, colaboradores,<br/>datos personales, documentos legales y consentimiento"]
+        FIN["finances<br/>Movimientos, búsqueda, catálogo, importación/exportación,<br/>indicadores, flujo de caja, recomendaciones, reporte PDF"]
+        TAX["taxes<br/>IVA automático y calculadoras, tasas versionadas,<br/>calendario F29/F22 y feriados"]
+        PRO["projections<br/>Proyección, escenarios, VAN/TIR"]
+        SUB["subscriptions<br/>Planes, pagos verificados (adaptadores),<br/>renovación y vencimiento"]
+        CORE["core<br/>Portada e indicadores, alertas,<br/>auditoría, asistente"]
     end
+    CRON["cron diario<br/>generar_alertas · renovar_suscripciones · respaldar.sh"]
     MW --> FIN & TAX & PRO
     ACC --> SUB
     FIN --> ACC
     PRO --> FIN
-    TAX -. "Sprint 4: IVA automático" .-> FIN
+    TAX --> FIN
+    CORE --> FIN & TAX
+    CRON --> CORE & SUB
     CORE --> EXT1["mindicador.cl"]
+    CORE --> EXT3["API de Claude (Anthropic)<br/>asistente, solo Premium"]
     SUB --> EXT2["Khipu / Flow"]
 ```
 
