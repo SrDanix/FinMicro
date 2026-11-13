@@ -136,3 +136,10 @@ class FiltroMovimientosForm(forms.Form):
         super().__init__(*args, **kwargs)
         for campo in self.fields.values():
             campo.widget.attrs.setdefault("class", "campo-input")
+
+class ImportarMovimientosForm(forms.Form):
+    archivo = forms.FileField(
+        label="Archivo Excel (.xlsx) o CSV",
+        help_text="Columnas: fecha, tipo (ingreso o gasto), monto, categoria y descripcion (opcional). Máximo 1.000 filas.",
+        widget=forms.ClearableFileInput(attrs={"accept": ".xlsx,.csv", "class": "campo-input"}),
+    )

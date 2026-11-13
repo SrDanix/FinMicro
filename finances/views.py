@@ -6,19 +6,24 @@ de ingresos y los costos fijos y variables del proyecto" — aplicado aquí
 al negocio del propio usuario.
 """
 import json
+from collections import Counter
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db import transaction
+from django.db.models import Q, Sum
 from django.db.models.functions import TruncMonth
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from accounts.negocio import requiere_edicion
-from core.alertas import revisar_movimiento, revisar_vencimientos
+from core.alertas import revisar_limite_plan, revisar_movimiento, revisar_vencimientos
 from core.models import Alerta
-from .forms import CategoriaForm, FiltroMovimientosForm, MovimientoForm, ProductoForm
+from . import exportacion, importacion
+from .forms import CategoriaForm, FiltroMovimientosForm, ImportarMovimientosForm, MovimientoForm, ProductoForm
 from .models import Categoria, Movimiento, Producto
 from .services import buscar_por_texto, flujo_de_caja_ultimos_meses, indicadores_del_mes
 
@@ -93,8 +98,7 @@ def dashboard(request):
     return render(request, "finances/dashboard.html", contexto)
 
 
-@login_required
-def listar_movimientos(request):
+def _movimientos_filtrados(request):
     form = FiltroMovimientosForm(request.GET or None)
     movimientos = Movimiento.objects.filter(usuario=request.negocio).select_related("categoria")
 
@@ -107,7 +111,12 @@ def listar_movimientos(request):
             movimientos = movimientos.filter(tipo=form.cleaned_data["tipo"])
         if form.cleaned_data.get("q"):
             movimientos = buscar_por_texto(movimientos, form.cleaned_data["q"])
+    return form, movimientos
 
+
+@login_required
+def listar_movimientos(request):
+    form, movimientos = _movimientos_filtrados(request)
     return render(
         request,
         "finances/movimiento_list.html",
@@ -281,3 +290,125 @@ def indicadores(request):
         ),
     }
     return render(request, "finances/indicadores.html", contexto)
+
+
+# ---------- RF-31: exportación ----------
+
+@login_required
+def exportar_movimientos(request):
+    """Exporta los movimientos con los mismos filtros de la lista."""
+    _, movimientos = _movimientos_filtrados(request)
+    filas = exportacion.filas_de(movimientos)
+    nombre = f"finmicro_movimientos_{timezone.localdate():%Y%m%d}"
+    if request.GET.get("formato") == "csv":
+        respuesta = HttpResponse(exportacion.a_csv(filas), content_type="text/csv; charset=utf-8")
+        respuesta["Content-Disposition"] = f'attachment; filename="{nombre}.csv"'
+    else:
+        respuesta = HttpResponse(
+            exportacion.a_xlsx(filas),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        respuesta["Content-Disposition"] = f'attachment; filename="{nombre}.xlsx"'
+    return respuesta
+
+
+# ---------- RF-12: importación ----------
+
+SESION_IMPORTACION = "importacion_movimientos"
+
+
+def _categorias_por_tipo(negocio):
+    categorias = Categoria.objects.filter(Q(usuario__isnull=True) | Q(usuario=negocio))
+    resultado = {Categoria.Tipo.INGRESO: [], Categoria.Tipo.GASTO: []}
+    for nombre, tipo in categorias.values_list("nombre", "tipo"):
+        resultado[tipo].append(nombre)
+    return resultado
+
+
+def _validar_importacion(negocio, filas):
+    existentes = Movimiento.objects.filter(usuario=negocio).values_list(
+        "fecha", "tipo", "monto", "categoria__nombre", "descripcion"
+    )
+    claves = {(f, t, m, c.casefold(), (d or "").casefold()) for f, t, m, c, d in existentes}
+    resultado = importacion.validar_filas(
+        filas,
+        categorias_por_tipo=_categorias_por_tipo(negocio),
+        claves_existentes=claves,
+        hoy=timezone.localdate(),
+    )
+    plan = negocio.suscripcion_activa.plan if negocio.suscripcion_activa else None
+    limite = plan.limite_movimientos_mensuales if plan else None
+    if limite and resultado.aceptadas:
+        meses = {f.fecha.strftime("%Y-%m") for f in resultado.aceptadas}
+        por_mes = Counter(
+            fecha.strftime("%Y-%m")
+            for fecha in Movimiento.objects.filter(usuario=negocio).values_list("fecha", flat=True)
+            if fecha.strftime("%Y-%m") in meses
+        )
+        excedidos = importacion.meses_sobre_el_limite(resultado.aceptadas, por_mes, limite)
+        if excedidos:
+            resultado.errores_generales.append(
+                f"Con esta importación superarías el límite de {limite} movimientos al mes de tu plan en: "
+                + ", ".join(excedidos) + ". Sube a Premium o importa menos filas."
+            )
+    return resultado
+
+
+@login_required
+@requiere_edicion
+def importar_movimientos(request):
+    resultado = None
+    form = ImportarMovimientosForm(request.POST or None, request.FILES or None)
+    if request.method == "POST" and form.is_valid():
+        archivo = form.cleaned_data["archivo"]
+        try:
+            filas = importacion.leer_archivo(archivo.name, archivo.read())
+        except importacion.ArchivoInvalido as error:
+            form.add_error("archivo", str(error))
+        else:
+            resultado = _validar_importacion(request.negocio, filas)
+            request.session[SESION_IMPORTACION] = (
+                [f.a_dict() for f in resultado.aceptadas] if resultado.se_puede_importar else []
+            )
+    return render(request, "finances/importar.html", {"form": form, "resultado": resultado})
+
+
+@login_required
+@requiere_edicion
+@require_POST
+def confirmar_importacion(request):
+    guardadas = request.session.pop(SESION_IMPORTACION, None)
+    if not guardadas:
+        messages.error(request, "No hay una importación pendiente. Sube el archivo de nuevo.")
+        return redirect("finances:importar_movimientos")
+    filas = [
+        (f["numero"], {"fecha": f["fecha"], "tipo": f["tipo"], "monto": f["monto"],
+                       "categoria": f["categoria"], "descripcion": f["descripcion"]})
+        for f in guardadas
+    ]
+    # Se valida otra vez: entre la vista previa y la confirmación pudo cambiar algo.
+    resultado = _validar_importacion(request.negocio, filas)
+    if not resultado.se_puede_importar:
+        messages.error(request, "Los datos cambiaron desde la vista previa. Revisa el archivo y súbelo de nuevo.")
+        return redirect("finances:importar_movimientos")
+
+    categorias = {
+        (c.nombre, c.tipo): c
+        for c in Categoria.objects.filter(Q(usuario__isnull=True) | Q(usuario=request.negocio))
+    }
+    with transaction.atomic():
+        Movimiento.objects.bulk_create(
+            Movimiento(usuario=request.negocio, categoria=categorias[(f.categoria, f.tipo)], tipo=f.tipo,
+                       monto=f.monto, fecha=f.fecha, descripcion=f.descripcion)
+            for f in resultado.aceptadas
+        )
+    revisar_limite_plan(request.negocio, timezone.localdate())
+    messages.success(request, f"Se importaron {len(resultado.aceptadas)} movimientos.")
+    return redirect("finances:listar_movimientos")
+
+
+@login_required
+def plantilla_importacion(request):
+    respuesta = HttpResponse(exportacion.plantilla_csv(), content_type="text/csv; charset=utf-8")
+    respuesta["Content-Disposition"] = 'attachment; filename="plantilla_finmicro.csv"'
+    return respuesta

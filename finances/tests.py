@@ -255,3 +255,148 @@ class CategoriaNaturalezaTests(TestCase):
         self.client.login(username="taller", password=CLAVE)
         self.client.post(reverse("finances:crear_categoria"), {"nombre": "Propinas", "tipo": "ingreso", "naturaleza": "fijo"})
         self.assertEqual(Categoria.objects.get(nombre="Propinas").naturaleza, "")
+
+
+# ---------- RF-12 y RF-31 ----------
+import csv
+import io
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from openpyxl import Workbook, load_workbook
+
+from . import importacion
+from .exportacion import a_csv, neutralizar
+
+
+def _csv(*filas):
+    texto = "\n".join(";".join(f) for f in filas)
+    return SimpleUploadedFile("movs.csv", texto.encode("utf-8"), content_type="text/csv")
+
+
+class LecturaImportacionTests(SimpleTestCase):
+    def test_montos_en_formatos_chilenos(self):
+        self.assertEqual(importacion.leer_monto("$ 12.500"), 12500)
+        self.assertEqual(importacion.leer_monto("1.234,00"), 1234)
+        self.assertEqual(importacion.leer_monto(15000.0), 15000)
+        self.assertIsNone(importacion.leer_monto("12,5"))      # decimales no
+        self.assertIsNone(importacion.leer_monto("abc"))
+
+    def test_fechas(self):
+        self.assertEqual(importacion.leer_fecha("05/11/2026"), date(2026, 11, 5))
+        self.assertEqual(importacion.leer_fecha("2026-11-05"), date(2026, 11, 5))
+        self.assertIsNone(importacion.leer_fecha("31/02/2026"))
+
+    def test_encabezados_con_sinonimos_y_tildes(self):
+        filas = importacion.leer_csv("Día;Movimiento;Valor;Categoría;Glosa\n01/11/2026;venta;100;Ventas;x".encode())
+        self.assertEqual(filas[0][1]["monto"], "100")
+
+    def test_faltan_columnas(self):
+        with self.assertRaisesMessage(importacion.ArchivoInvalido, "categoria"):
+            importacion.leer_csv(b"fecha;tipo;monto\n01/11/2026;ingreso;100")
+
+    def test_limite_de_plan_por_mes(self):
+        filas = [importacion.FilaValida(i, date(2026, 11, 1), "ingreso", Decimal(1), "Ventas", "") for i in range(5)]
+        self.assertEqual(importacion.meses_sobre_el_limite(filas, {"2026-11": 56}, 60), ["2026-11"])
+        self.assertEqual(importacion.meses_sobre_el_limite(filas, {"2026-11": 55}, 60), [])
+        self.assertEqual(importacion.meses_sobre_el_limite(filas, {}, None), [])
+
+
+class ImportacionTests(TestCase):
+    def setUp(self):
+        self.usuario = crear_usuario("feria", "11111111-1")
+        self.client.login(username="feria", password=CLAVE)
+        self.ayer = (timezone.localdate() - relativedelta(days=1)).strftime("%d/%m/%Y")
+
+    def _subir(self, archivo):
+        return self.client.post(reverse("finances:importar_movimientos"), {"archivo": archivo})
+
+    def test_vista_previa_y_confirmacion(self):
+        respuesta = self._subir(_csv(
+            ("fecha", "tipo", "monto", "categoria", "descripcion"),
+            (self.ayer, "ingreso", "$15.000", "ventas", "Feria"),
+            (self.ayer, "egreso", "8500", "Mercaderia / insumos", "Harina"),
+        ))
+        self.assertContains(respuesta, "2 para importar")
+        self.assertFalse(Movimiento.objects.exists())               # aún no se guarda
+        self.client.post(reverse("finances:confirmar_importacion"))
+        self.assertEqual(Movimiento.objects.filter(usuario=self.usuario).count(), 2)
+        gasto = Movimiento.objects.get(tipo="gasto")
+        self.assertEqual((gasto.monto, gasto.categoria.nombre), (8500, "Mercadería / insumos"))
+        # Reimportar el mismo archivo no duplica.
+        respuesta = self._subir(_csv(("fecha", "tipo", "monto", "categoria", "descripcion"),
+                                     (self.ayer, "ingreso", "15000", "Ventas", "Feria")))
+        self.assertContains(respuesta, "1 ya registradas")
+        self.assertNotContains(respuesta, "Importar 1")
+
+    def test_errores_por_fila_no_importan_nada(self):
+        respuesta = self._subir(_csv(
+            ("fecha", "tipo", "monto", "categoria"),
+            (self.ayer, "ingreso", "1000", "Ventas"),
+            ("31/31/2026", "ingreso", "1000", "Ventas"),
+            (self.ayer, "regalo", "-5", "Inventada"),
+        ))
+        self.assertContains(respuesta, "Fecha no reconocida")
+        self.assertContains(respuesta, "El tipo debe ser ingreso o gasto")
+        self.assertContains(respuesta, "No se importó nada")
+        self.client.post(reverse("finances:confirmar_importacion"))
+        self.assertFalse(Movimiento.objects.exists())
+
+    def test_respeta_el_limite_del_plan_basico(self):
+        filas = [("fecha", "tipo", "monto", "categoria")] + [(self.ayer, "ingreso", str(1000 + i), "Ventas") for i in range(61)]
+        respuesta = self._subir(_csv(*filas))
+        self.assertContains(respuesta, "superarías el límite de 60")
+        self.client.post(reverse("finances:confirmar_importacion"))
+        self.assertFalse(Movimiento.objects.exists())
+
+    def test_excel(self):
+        libro = Workbook()
+        libro.active.append(["fecha", "tipo", "monto", "categoria", "descripcion"])
+        libro.active.append([timezone.localdate() - relativedelta(days=2), "gasto", 12000, "Arriendo", "Local"])
+        buffer = io.BytesIO()
+        libro.save(buffer)
+        respuesta = self._subir(SimpleUploadedFile("movs.xlsx", buffer.getvalue()))
+        self.assertContains(respuesta, "1 para importar")
+
+    def test_archivo_no_soportado(self):
+        respuesta = self._subir(SimpleUploadedFile("movs.pdf", b"%PDF"))
+        self.assertContains(respuesta, "Sube un archivo .xlsx o .csv")
+
+    def test_confirmar_sin_vista_previa(self):
+        respuesta = self.client.post(reverse("finances:confirmar_importacion"), follow=True)
+        self.assertContains(respuesta, "No hay una importación pendiente")
+
+    def test_plantilla(self):
+        respuesta = self.client.get(reverse("finances:plantilla_importacion"))
+        self.assertIn(b"fecha;tipo;monto;categoria;descripcion", respuesta.content)
+
+
+class ExportacionTests(TestCase):
+    def setUp(self):
+        self.usuario = crear_usuario("feria", "11111111-1")
+        hoy = timezone.localdate()
+        mov(self.usuario, "Ventas", 15_000, hoy, "=HYPERLINK(\"http://malo\")")
+        mov(self.usuario, "Arriendo", 200_000, hoy, "Local")
+        mov(crear_usuario("otro", "22222222-2"), "Ventas", 999, hoy, "Ajeno")
+        self.client.login(username="feria", password=CLAVE)
+
+    def test_neutraliza_formulas(self):
+        self.assertEqual(neutralizar("=SUMA(A1)"), "'=SUMA(A1)")
+        self.assertEqual(neutralizar("Venta"), "Venta")
+        self.assertIn(b"'=HYPERLINK", a_csv([(date(2026, 1, 1), "Ingreso", "Ventas", "", None, Decimal(1), "=HYPERLINK()")]))
+
+    def test_exporta_excel_solo_del_negocio_y_con_filtros(self):
+        respuesta = self.client.get(reverse("finances:exportar_movimientos"), {"formato": "xlsx", "tipo": "gasto"})
+        self.assertIn("attachment", respuesta["Content-Disposition"])
+        hoja = load_workbook(io.BytesIO(respuesta.content)).active
+        filas = list(hoja.iter_rows(values_only=True))
+        self.assertEqual(filas[0][0], "Fecha")
+        self.assertEqual(len(filas), 2)
+        self.assertEqual((filas[1][2], filas[1][5]), ("Arriendo", 200_000))
+
+    def test_exporta_csv(self):
+        respuesta = self.client.get(reverse("finances:exportar_movimientos"), {"formato": "csv"})
+        texto = respuesta.content.decode("utf-8-sig")
+        filas = list(csv.reader(io.StringIO(texto), delimiter=";"))
+        self.assertEqual(len(filas), 3)
+        self.assertNotIn("Ajeno", texto)
+        self.assertIn("'=HYPERLINK", texto)
