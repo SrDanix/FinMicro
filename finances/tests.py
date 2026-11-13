@@ -402,3 +402,56 @@ class ExportacionTests(TestCase):
         self.assertEqual(len(filas), 3)
         self.assertNotIn("Ajeno", texto)
         self.assertIn("'=HYPERLINK", texto)
+
+
+# ---------- RF-38 y RF-30 ----------
+from .recomendaciones import alzas_por_categoria, recomendar
+
+
+class RecomendacionesTests(SimpleTestCase):
+    def _codigos(self, **datos):
+        base = {"ventas": 1_000_000, "utilidad": 300_000, "margen_porcentaje": Decimal("50"),
+                "costos_fijos": 200_000, "punto_equilibrio": Decimal("400000")}
+        base.update(datos)
+        return [r.codigo for r in recomendar(**base)]
+
+    def test_negocio_sano_no_recibe_alertas(self):
+        self.assertEqual(self._codigos(), [])
+
+    def test_reglas(self):
+        self.assertEqual(self._codigos(ventas=0), ["R00"])
+        self.assertIn("R01", self._codigos(utilidad=-1))
+        self.assertIn("R02", self._codigos(margen_porcentaje=Decimal("15")))
+        self.assertIn("R03", self._codigos(punto_equilibrio=Decimal("1200000")))
+        self.assertIn("R05", self._codigos(costos_fijos=700_000))
+        self.assertIn("R06", self._codigos(meta_ventas=900_000))
+        self.assertIn("R07", self._codigos(alzas_por_categoria=[("Transporte", Decimal(50_000), Decimal(20_000))]))
+        self.assertIn("R08", self._codigos(porcentaje_sin_clasificar=45))
+
+    def test_mensaje_con_montos_chilenos(self):
+        mensaje = recomendar(ventas=1_000_000, utilidad=1, margen_porcentaje=None, costos_fijos=0,
+                             punto_equilibrio=Decimal("1250000"))[0].mensaje
+        self.assertIn("$250.000", mensaje)
+
+
+class RecomendacionesYReporteTests(TestCase):
+    def setUp(self):
+        self.usuario = crear_usuario("bazar", "11111111-1", afecto_iva=True, regimen_tributario="PP")
+        self.mes = timezone.localdate().replace(day=1)
+        for i in (1, 2, 3):
+            mov(self.usuario, "Transporte", 10_000, self.mes - relativedelta(months=i))
+        mov(self.usuario, "Transporte", 40_000, self.mes)
+        mov(self.usuario, "Ventas", 100_000, self.mes, "Venta")
+        self.client.login(username="bazar", password=CLAVE)
+
+    def test_alza_de_gasto_por_categoria(self):
+        self.assertEqual(alzas_por_categoria(self.usuario, self.mes), [("Transporte", 40_000, 10_000)])
+
+    def test_recomendaciones_en_el_panel(self):
+        self.assertContains(self.client.get(reverse("finances:dashboard")), "Tu gasto en Transporte subió")
+
+    def test_reporte_pdf(self):
+        respuesta = self.client.get(reverse("finances:reporte_mensual"), {"mes": self.mes.strftime("%Y-%m")})
+        self.assertEqual(respuesta["Content-Type"], "application/pdf")
+        self.assertTrue(respuesta.content.startswith(b"%PDF"))
+        self.assertIn("attachment", respuesta["Content-Disposition"])

@@ -152,3 +152,38 @@ def evaluar_viabilidad(inversion_inicial: Decimal, flujos_periodo: list[Decimal]
         "viable": van > 0,
         "tasa_descuento_porcentaje": round(tasa * 100, 2),
     }
+
+# ---------- RF-36: escenarios ----------
+
+ESCENARIOS = (
+    # (nombre, variación de ingresos, variación de gastos) sobre la proyección base.
+    ("Optimista", Decimal("0.10"), Decimal("-0.05")),
+    ("Base", Decimal("0"), Decimal("0")),
+    ("Pesimista", Decimal("-0.15"), Decimal("0.05")),
+)
+
+
+def proyectar_escenarios(ingresos_base, gastos_base, escenarios=ESCENARIOS):
+    """Aplica a la proyección base supuestos explícitos para cada escenario.
+
+    Devuelve una lista de dicts con el nombre, los supuestos en porcentaje y,
+    por mes, ingresos, gastos, resultado y resultado acumulado.
+    """
+    if len(ingresos_base) != len(gastos_base):
+        raise ValueError("Ingresos y gastos deben cubrir los mismos meses.")
+    salida = []
+    for nombre, var_ingresos, var_gastos in escenarios:
+        meses, acumulado = [], Decimal("0")
+        for ingreso, gasto in zip(ingresos_base, gastos_base):
+            ingresos = _redondear_clp(Decimal(ingreso) * (1 + var_ingresos))
+            gastos = _redondear_clp(Decimal(gasto) * (1 + var_gastos))
+            acumulado += ingresos - gastos
+            meses.append({"ingresos": ingresos, "gastos": gastos, "resultado": ingresos - gastos, "acumulado": acumulado})
+        salida.append({
+            "nombre": nombre,
+            "variacion_ingresos": int(var_ingresos * 100),
+            "variacion_gastos": int(var_gastos * 100),
+            "meses": meses,
+            "acumulado": acumulado,
+        })
+    return salida

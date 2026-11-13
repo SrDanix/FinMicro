@@ -7,6 +7,7 @@
   <label for="mes" class="texto-tenue">Mes</label>
   <input type="month" id="mes" name="mes" value="{{ mes_valor }}" class="campo-input" style="width:auto;" onchange="this.form.submit()">
   <noscript><button type="submit" class="btn btn-secundario btn-chico">Ver</button></noscript>
+  <a href="{% url 'finances:reporte_mensual' %}?mes={{ mes_valor }}" class="btn btn-secundario">Descargar PDF</a>
 </form>
 {% endblock %}
 
@@ -38,6 +39,16 @@
     <p class="texto-ayuda">{{ indicadores.cantidad_ventas }} venta{{ indicadores.cantidad_ventas|pluralize }} por ${{ indicadores.ventas|floatformat:"0g" }}.</p>
   </div>
 </div>
+
+{% if recomendaciones %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Recomendaciones</h3></div>
+  <ul class="mt-0" style="padding-left:20px; margin-bottom:0;">
+    {% for r in recomendaciones %}<li style="margin-bottom:6px;">{{ r.mensaje }}</li>{% endfor %}
+  </ul>
+  <p class="texto-ayuda">Se generan con reglas fijas a partir de tus cifras del mes. Son sugerencias, no asesoría.</p>
+</div>
+{% endif %}
 
 <div class="grid grid-2" style="margin-top:20px;">
   <div class="tarjeta">

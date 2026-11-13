@@ -18,6 +18,30 @@
   <canvas id="graficoProyeccion" height="110"></canvas>
   <p class="texto-ayuda">Proyección por tendencia lineal de tus ingresos de los últimos 6 meses completos. Es una estimación, no una garantía.</p>
 </div>
+
+{% if escenarios %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo"><h3>Escenarios de los próximos 3 meses</h3></div>
+  <div class="tabla-envoltorio">
+    <table class="tabla">
+      <thead>
+        <tr><th>Escenario</th><th>Supuesto</th>{% for e in etiquetas_proyeccion %}<th class="col-monto">{{ e }}</th>{% endfor %}<th class="col-monto">Acumulado</th></tr>
+      </thead>
+      <tbody>
+      {% for esc in escenarios %}
+        <tr>
+          <td><strong>{{ esc.nombre }}</strong></td>
+          <td class="texto-tenue">Ingresos {% if esc.variacion_ingresos > 0 %}+{% endif %}{{ esc.variacion_ingresos }}% · gastos {% if esc.variacion_gastos > 0 %}+{% endif %}{{ esc.variacion_gastos }}%</td>
+          {% for m in esc.meses %}<td class="col-monto cifra {% if m.resultado < 0 %}texto-gasto{% endif %}" title="Ingresos ${{ m.ingresos|floatformat:'0g' }} − gastos ${{ m.gastos|floatformat:'0g' }}">${{ m.resultado|floatformat:"0g" }}</td>{% endfor %}
+          <td class="col-monto cifra {% if esc.acumulado < 0 %}texto-gasto{% else %}texto-ingreso{% endif %}"><strong>${{ esc.acumulado|floatformat:"0g" }}</strong></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="texto-ayuda">Cada cifra es el resultado del mes (ingresos menos gastos proyectados). El escenario base es la tendencia de tus datos; los otros aplican los supuestos indicados.</p>
+</div>
+{% endif %}
 {% else %}
 <div class="tarjeta estado-vacio">
   <h3>Faltan datos para proyectar</h3>

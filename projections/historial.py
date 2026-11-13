@@ -8,8 +8,8 @@ from finances.models import Categoria, Movimiento
 from .services import proyectar_ingresos
 
 
-def historial_ingresos_mensuales(usuario, meses=6, mes_referencia=None):
-    """Totales de ingresos de los `meses` anteriores a `mes_referencia`, del más antiguo al más reciente.
+def historial_ingresos_mensuales(usuario, meses=6, mes_referencia=None, tipo=Categoria.Tipo.INGRESO):
+    """Totales de `tipo` (ingresos por defecto) de los `meses` anteriores a `mes_referencia`, del más antiguo al más reciente.
 
     Se recorre mes a mes (en vez de agrupar con TruncMonth) para poder
     incluir explícitamente los meses sin ningún ingreso registrado como
@@ -26,7 +26,7 @@ def historial_ingresos_mensuales(usuario, meses=6, mes_referencia=None):
         mes_ref = mes_referencia - relativedelta(months=i)
         total = Movimiento.objects.filter(
             usuario=usuario,
-            tipo=Categoria.Tipo.INGRESO,
+            tipo=tipo,
             fecha__year=mes_ref.year,
             fecha__month=mes_ref.month,
         ).aggregate(t=Sum("monto"))["t"] or 0

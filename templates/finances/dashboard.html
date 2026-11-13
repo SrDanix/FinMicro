@@ -59,6 +59,18 @@
 </div>
 {% endif %}
 
+{% if recomendaciones %}
+<div class="tarjeta" style="margin-top:20px;">
+  <div class="tarjeta-titulo flex-entre">
+    <h3>Recomendaciones</h3>
+    <a href="{% url 'finances:indicadores' %}" class="btn btn-fantasma btn-chico">Ver indicadores</a>
+  </div>
+  <ul class="mt-0" style="padding-left:20px; margin-bottom:0;">
+    {% for r in recomendaciones %}<li style="margin-bottom:6px;">{{ r.mensaje }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 <div class="grid grid-2" style="margin-top:20px;">
   <div class="tarjeta">
     <div class="tarjeta-titulo"><h3>Últimos 6 meses</h3></div>

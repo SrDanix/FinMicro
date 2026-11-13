@@ -26,6 +26,7 @@ from core.models import Alerta
 from . import exportacion, importacion
 from .forms import CategoriaForm, FiltroMovimientosForm, ImportarMovimientosForm, MovimientoForm, ProductoForm
 from .models import Categoria, Movimiento, Producto
+from .recomendaciones import recomendaciones_del_mes
 from .services import buscar_por_texto, flujo_de_caja_ultimos_meses, indicadores_del_mes
 
 # calendar.month_abbr depende del locale del sistema (en Windows suele
@@ -82,6 +83,7 @@ def dashboard(request):
     meta = request.negocio.meta_ventas_mensual
     contexto = {
         "alertas": Alerta.objects.filter(negocio=request.negocio, leida=False)[:5],
+        "recomendaciones": recomendaciones_del_mes(request.negocio, hoy)[:3],
         "meta_ventas": meta,
         "avance_meta": min(100, round(resumen_actual["ingresos"] * 100 / meta)) if meta else None,
         "resumen": resumen_actual,
@@ -276,10 +278,12 @@ def _mes_elegido(request):
 def indicadores(request):
     mes = _mes_elegido(request)
     flujos = flujo_de_caja_ultimos_meses(request.negocio, mes, meses=6)
+    datos = indicadores_del_mes(request.negocio, mes)
     contexto = {
         "mes": mes,
         "mes_valor": mes.strftime("%Y-%m"),
-        "indicadores": indicadores_del_mes(request.negocio, mes),
+        "indicadores": datos,
+        "recomendaciones": recomendaciones_del_mes(request.negocio, mes, datos),
         "flujo": flujos[-1],
         "flujos": flujos,
         "grafico_flujo": json.dumps(
@@ -414,4 +418,16 @@ def confirmar_importacion(request):
 def plantilla_importacion(request):
     respuesta = HttpResponse(exportacion.plantilla_csv(), content_type="text/csv; charset=utf-8")
     respuesta["Content-Disposition"] = 'attachment; filename="plantilla_finmicro.csv"'
+    return respuesta
+
+
+# ---------- RF-30: reporte mensual en PDF ----------
+
+@login_required
+def reporte_mensual(request):
+    from .reporte import generar_reporte_mensual
+
+    mes = _mes_elegido(request)
+    respuesta = HttpResponse(generar_reporte_mensual(request.negocio, mes), content_type="application/pdf")
+    respuesta["Content-Disposition"] = f'attachment; filename="finmicro_reporte_{mes:%Y_%m}.pdf"'
     return respuesta

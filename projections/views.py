@@ -10,7 +10,9 @@ from django.utils import timezone
 from finances.views import MESES_ABREV
 from .forms import EvaluadorViabilidadForm
 from .historial import historial_ingresos_mensuales, recortar_inicio
-from .services import evaluar_viabilidad, proyectar_ingresos
+from finances.models import Categoria
+
+from .services import evaluar_viabilidad, proyectar_escenarios, proyectar_ingresos
 
 
 def _etiqueta_mes(fecha):
@@ -25,9 +27,15 @@ def proyeccion_ingresos(request):
     meses_con_datos = sum(1 for v in historial if v > 0)
 
     proyeccion = None
+    escenarios = None
     etiquetas_proyeccion = []
     if serie is not None:
         proyeccion = proyectar_ingresos(serie, meses_futuros=3)
+        # RF-36: los gastos se proyectan con el mismo método.
+        _, historial_gastos = historial_ingresos_mensuales(request.negocio, meses=6, tipo=Categoria.Tipo.GASTO)
+        serie_gastos = recortar_inicio(historial_gastos)
+        gastos = proyectar_ingresos(serie_gastos, meses_futuros=3) if serie_gastos else [0, 0, 0]
+        escenarios = proyectar_escenarios(proyeccion, gastos)
         # La proyección empieza en el mes en curso (aún incompleto).
         mes_actual = timezone.localdate().replace(day=1)
         etiquetas_proyeccion = [
@@ -46,6 +54,8 @@ def proyeccion_ingresos(request):
         {
             "suficientes_datos": meses_con_datos >= 2,
             "proyeccion": proyeccion,
+            "escenarios": escenarios,
+            "etiquetas_proyeccion": etiquetas_proyeccion,
             "grafico_datos": json.dumps(grafico),
         },
     )
